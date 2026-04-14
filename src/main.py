@@ -28,12 +28,16 @@ def check_consistency(data_dir: Path):
     checker.write_report()
 
 def load_data():
-    incident_loader = DataLoader(DATA_DIR_INCIDENTS, loader_config=True)
-    incident_df = incident_loader.load_all_csv_in_folder()
+    try:
+        incident_loader = DataLoader(DATA_DIR_INCIDENTS, loader_config=True)
+        incident_df = incident_loader.load_all_csv_in_folder()
 
-    mobilisation_loader = DataLoader(DATA_DIR_MOBILISATION, loader_config=True)
-    mobilisation_df = mobilisation_loader.load_all_csv_in_folder()
-    return incident_df, mobilisation_df
+        mobilisation_loader = DataLoader(DATA_DIR_MOBILISATION, loader_config=True)
+        mobilisation_df = mobilisation_loader.load_all_csv_in_folder()
+        return incident_df, mobilisation_df
+    except Exception as e:
+        print(f"Error while loading data: {e}")
+        raise
 
 
 def eda_overview(df, name="DataFrame", mode="print_and_save"):
