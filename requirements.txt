@@ -5,6 +5,7 @@ contourpy==1.3.0
 cycler==0.12.1
 debugpy==1.8.20
 decorator==5.2.1
+et_xmlfile==2.0.0
 exceptiongroup==1.3.1
 executing==2.2.1
 fonttools==4.60.2
@@ -20,6 +21,7 @@ matplotlib==3.9.4
 matplotlib-inline==0.2.1
 nest-asyncio==1.6.0
 numpy==2.0.2
+openpyxl==3.1.5
 packaging==26.0
 pandas==2.3.3
 parso==0.8.6
@@ -44,3 +46,5 @@ typing_extensions==4.15.0
 tzdata==2026.1
 wcwidth==0.6.0
 zipp==3.23.0
+plotly
+kaleido
