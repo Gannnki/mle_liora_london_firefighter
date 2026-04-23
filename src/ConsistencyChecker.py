@@ -1,5 +1,5 @@
-# check consistency of the data
-from importlib.resources import files
+"""Utilities for inspecting consistency across converted CSV datasets."""
+
 from pathlib import Path
 from typing import Any
 
@@ -7,19 +7,21 @@ import pandas as pd
 
 
 class CSVConsistencyChecker:
+    """Check schemas, dtypes, null counts, and summary statistics for CSV files."""
+
     def __init__(self, folder_path: str | Path):
+        """Initialize the checker with the folder containing CSV files."""
         self.folder_path = Path(folder_path)
         print("Current working dir:", Path.cwd())
 
     def get_csv_files(self) -> list[Path]:
-
-        files = list(self.folder_path.rglob("*.csv"))
-
-        print("Found files:", files)
-
-        return sorted(self.folder_path.glob("*.csv"))
+        """Return all CSV files directly inside the configured folder."""
+        csv_files = sorted(self.folder_path.glob("*.csv"))
+        print("Found files:", csv_files)
+        return csv_files
 
     def inspect_file(self, file_path: Path) -> dict[str, Any]:
+        """Read a CSV file and return its core structure and quality metadata."""
         df = pd.read_csv(file_path)
 
         return {
@@ -32,6 +34,7 @@ class CSVConsistencyChecker:
         }
 
     def check_schema_consistency(self) -> None:
+        """Print whether each CSV file has the same column order as the first file."""
         files = self.get_csv_files()
         if not files:
             print("No CSV files found.")
@@ -53,6 +56,7 @@ class CSVConsistencyChecker:
                 print(f"[OK] Schema matches: {file_path.name}")
 
     def check_dtype_consistency(self) -> None:
+        """Print dtype mismatches compared with the first CSV file."""
         files = self.get_csv_files()
         if not files:
             print("No CSV files found.")
@@ -81,6 +85,7 @@ class CSVConsistencyChecker:
                 print(f"[OK] Dtypes match: {file_path.name}")
 
     def summarize_files(self) -> pd.DataFrame:
+        """Return a one-row-per-file summary with row and column counts."""
         rows = []
         for file_path in self.get_csv_files():
             info = self.inspect_file(file_path)
@@ -94,6 +99,7 @@ class CSVConsistencyChecker:
         return pd.DataFrame(rows)
 
     def check_null_ratio(self) -> None:
+        """Print the percentage of missing values for columns with any nulls."""
         print("\nChecking null ratios...\n")
         for file_path in self.get_csv_files():
             df = pd.read_csv(file_path)
@@ -104,6 +110,7 @@ class CSVConsistencyChecker:
             print("-" * 40)
 
     def write_report(self, output_dir: str | Path = "output") -> None:
+        """Write a text report with schema, dtype, and null-count details."""
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -114,7 +121,7 @@ class CSVConsistencyChecker:
         files = self.get_csv_files()
 
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(f"CSV Consistency Report\n")
+            f.write("CSV Consistency Report\n")
             f.write(f"Folder: {self.folder_path.resolve()}\n")
             f.write(f"Total files: {len(files)}\n")
             f.write("=" * 50 + "\n\n")
