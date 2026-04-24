@@ -126,4 +126,6 @@ cython_debug/
 # Project specific resource directories
 lfb_downloads/
 lfb_converted/
+lfb_truncated/
 output/
+utils/
