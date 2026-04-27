@@ -1,10 +1,12 @@
 """Preprocessing pipeline for London Fire Brigade incident and mobilisation data."""
 
+from calendar import month
 import os
-
+import holidays
+from dateutil.rrule import weekday
 import pandas as pd
 from pyproj import Transformer
-
+import matplotlib.pyplot as plt
 
 class DataPreprocesser:
     """Merge raw datasets and prepare engineered features for modelling."""
@@ -17,6 +19,7 @@ class DataPreprocesser:
         rules_path: str | os.PathLike,
         merged_path: str | os.PathLike,
         path_intermediate_output: str | os.PathLike,
+        path_distance_data: str | os.PathLike
     ):
         """Initialize the preprocessor with input data and output paths."""
         self.incident_df = incident_df
@@ -30,6 +33,7 @@ class DataPreprocesser:
         self.rules_path = rules_path
         self.merged_path = merged_path
         self.intermediate_path = path_intermediate_output
+        self.distance_data_path = path_distance_data
 
     def run(self, export2csv: bool) -> None:
         """Run the full preprocessing pipeline and optionally export the result."""
@@ -156,8 +160,25 @@ class DataPreprocesser:
 
         # Add placeholders for downstream distance and speed features.
         df["distance_fire_to_station"] = None
-        df["distance_fire_to_city_center"] = None
-        df["avg_speed"] = None
+        df["avg_speed"] = 50 # assume average speed of 50 km/h for now, to be replaced with actual speed calculated from distance and time later
+
+        # deal with time features - remove and extract
+        df = self.process_mobilised_datetime(df)
+
+        # add new time feature columns: Is_Nightshift, Is_Rush_Hour, Is_weekend, is_public_holiday
+        df = self.add_new_time_features(df)
+
+        # keep the entries with PumpOrder == 1
+        df = df[df["PumpOrder"] == 1].copy()
+
+        # merge distance dataset
+        df = self.merge_distance_data(df)
+
+        # deal with outliers in AttendanceTimeSeconds
+        df = self.handle_attendance_time_outliers(df)
+
+        # deal with outliers in NumOfCalls and create new features
+        df = self.handle_numcall_outliers(df)
         return df
 
     def process_coordinates(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -191,8 +212,171 @@ class DataPreprocesser:
     def process_special_service_type(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create a special-service flag and fill missing service categories."""
         # Binary indicator for whether a row has a special service.
-        df["is_special_service"] = df["SpecialServiceType"].notna().astype(int)
+        pos_incidentgrp =  df.columns.get_loc("IncidentGroup")
+        is_special_service = df["SpecialServiceType"].notna().astype(int)
+        df.insert(pos_incidentgrp + 1, "Is_SpecialService", is_special_service)
+
+        mask_inconsistent = (
+        (df["IncidentGroup"] == "Special Service") &
+        (df["SpecialServiceType"].isna())
+        )
+        print("Inconsistent rows in SpecialService:", mask_inconsistent.sum())    
+        df = df[~mask_inconsistent].copy()
 
         # fill missing values (semantic: not special service)
         df["SpecialServiceType"] = df["SpecialServiceType"].fillna("NoSpecialService")
+        return df
+    
+    def process_mobilised_datetime(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Drop HourOfCall and DateOfCall,
+        then extract month and hour from DateAndTimeMobilised.
+        """
+
+        # convert to datetime
+        df["DateAndTimeMobilised"] = pd.to_datetime(
+            df["DateAndTimeMobilised"],
+            format="%d/%m/%Y %H:%M",
+            errors="coerce"
+        )
+
+        # extract new time features
+        hour = df["DateAndTimeMobilised"].dt.hour
+        # find position after CalYear
+        calyear_pos = df.columns.get_loc("CalYear")
+
+        df["DateOfCall"] = pd.to_datetime(df["DateOfCall"], errors="coerce")
+        month = df["DateOfCall"].dt.month
+        weekday = df["DateOfCall"].dt.weekday
+
+        # insert new columns
+        df.insert(calyear_pos + 1, "Month", month)
+        df.insert(calyear_pos + 3, "Hour", hour)
+        df.insert(calyear_pos + 2, "Weekday", weekday)
+
+        # drop old redundant columns
+        df = df.drop(columns=["HourOfCall", "DateAndTimeMobilised"], errors="ignore")
+        return df
+    
+    def add_new_time_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add time-based indicator features:
+        - is_nightshift: 23:00–06:00
+        - is_rush_hour: 07:00–09:00 and 16:00–19:00
+        - is_weekend: Saturday/Sunday
+        """
+        # find position after Hour
+        hour_pos = df.columns.get_loc("Hour")
+        is_nightshift = ((df["Hour"] >= 23) | (df["Hour"] < 6)).astype(int)
+
+        is_rush_hour = (
+            ((df["Hour"] >= 7) & (df["Hour"] <= 9)) |
+            ((df["Hour"] >= 16) & (df["Hour"] <= 19))
+        ).astype(int)
+
+        is_weekend = (df["Weekday"] >= 5).astype(int)
+
+        uk_holidays = holidays.UnitedKingdom(years=df["CalYear"].unique())
+        is_public_holiday = df["DateOfCall"].dt.date.apply(
+        lambda x: 1 if x in uk_holidays else 0
+    )
+
+        # insert new columns
+        df.insert(hour_pos + 1, "Is_Nightshift", is_nightshift)
+        df.insert(hour_pos + 2, "Is_Rush_Hour", is_rush_hour)
+        df.insert(hour_pos + 3, "Is_Weekend", is_weekend)
+        df.insert(hour_pos + 4, "Is_Public_Holiday", is_public_holiday)
+
+        # remove date columns that have been used to extract time features
+        df = df.drop(columns=["DateOfCall"], errors="ignore")
+        return df
+    
+    def remove_attendance_time_outliers(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove unrealistic outliers in AttendanceTimeSeconds.
+        """
+
+        # remove impossible low values
+        df = df[df["AttendanceTimeSeconds"] >= 10].copy()
+
+        # remove extreme high values using 99.5 percentile
+        upper_bound = df["AttendanceTimeSeconds"].quantile(0.995)
+        print(f"Upper bound for AttendanceTimeSeconds: {upper_bound:.2f}")
+
+        df = df[df["AttendanceTimeSeconds"] <= upper_bound].copy()
+        return df
+    
+    def merge_distance_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        distance_df = pd.read_csv(self.distance_data_path)
+
+        df["IncidentNumber"] = df["IncidentNumber"].astype(str)
+        distance_df["IncidentNumber"] = distance_df["IncidentNumber"].astype(str)
+
+        distance_df = distance_df.drop_duplicates(subset=["IncidentNumber"])
+
+        distance_map = distance_df.set_index("IncidentNumber")["Distance_from_First_Station"]
+        df["distance_fire_to_station"] = df["IncidentNumber"].map(distance_map)
+
+        print("Missing distance:", df["distance_fire_to_station"].isna().sum())
+
+        # if value missing we add 20 m as a small buffer distance to avoid zero distance which can cause issues in log transformation later
+        df["distance_fire_to_station"] = df["distance_fire_to_station"].fillna(20)
+        df.loc[df["distance_fire_to_station"] == 0, "distance_fire_to_station"] = 20
+        return df
+    
+    def handle_attendance_time_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove unrealistic outliers in AttendanceTimeSeconds. we keep 99 and cap the rest at tail
+        """
+        df2 = df[df['AttendanceTimeSeconds'] >= 20].copy()
+
+        upper_cap = df2['AttendanceTimeSeconds'].quantile(0.99)
+
+        df2['AttendanceTimeSeconds'] = df2['AttendanceTimeSeconds'].clip(upper=upper_cap)
+        return df2
+    
+    def handle_numcall_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        """
+        Preprocess NumOfCalls feature:
+        1. Create business-oriented buckets
+        2. Create repeated call flag
+        3. Create log transformed feature
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        col : str
+            column name of number of calls
+            
+        Returns
+        -------
+        df : pandas.DataFrame
+            dataframe with new processed columns
+        """
+        
+        df = df.copy()
+        col = "NumCalls"
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(1)
+
+        def bucket_num_calls(x):
+            if x <= 1:
+                return "1"
+            elif x == 2:
+                return "2"
+            elif x == 3:
+                return "3"
+            elif x <= 5:
+                return "4-5"
+            elif x <= 10:
+                return "6-10"
+            else:
+                return "10+"
+        
+        df["NumOfCalls_bucket"] = df[col].apply(bucket_num_calls)
+        is_repeatedCall = (df[col] > 1).astype(int)
+
+        pos_numcall = df.columns.get_loc(col)
+        # insert new columns
+        df.insert(pos_numcall + 1, "Is_RepeatedCall", is_repeatedCall)
         return df
