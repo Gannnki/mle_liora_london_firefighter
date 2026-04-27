@@ -286,9 +286,6 @@ class DataPreprocesser:
         df.insert(hour_pos + 2, "Is_Rush_Hour", is_rush_hour)
         df.insert(hour_pos + 3, "Is_Weekend", is_weekend)
         df.insert(hour_pos + 4, "Is_Public_Holiday", is_public_holiday)
-
-        # remove date columns that have been used to extract time features
-        df = df.drop(columns=["DateOfCall"], errors="ignore")
         return df
     
     def remove_attendance_time_outliers(df: pd.DataFrame) -> pd.DataFrame:

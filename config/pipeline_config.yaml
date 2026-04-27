@@ -1,0 +1,104 @@
+target_column: AttendanceTimeSeconds
+date_column: DateOfCall
+random_state: 42
+
+drop_columns:
+  - IncidentNumber
+  - PumpOrder
+  - NumCalls
+  - avg_speed
+
+date_splits:
+  train_start: "2021-01-01"
+  train_end: "2024-12-31"
+
+  val_start: "2025-01-01"
+  val_end: "2025-06-30"
+
+  test_start: "2025-07-01"
+  test_end: "2025-12-31"
+
+  sanity_start: "2026-01-01"
+  sanity_end: "2026-03-31"
+
+feature_encoding:
+  CalYear:
+    encoding: NUMERIC_KEEP
+
+  Month:
+    encoding: CYCLIC
+
+  Weekday:
+    encoding: CYCLIC
+
+  Hour:
+    encoding: CYCLIC
+
+  Is_Nightshift:
+    encoding: BINARY_KEEP
+
+  Is_Rush_Hour:
+    encoding: BINARY_KEEP
+
+  Is_Weekend:
+    encoding: BINARY_KEEP
+
+  Is_Public_Holiday:
+    encoding: BINARY_KEEP
+
+  DeployedFromStation_Name:
+    encoding: LEAVE_ONE_OUT_TARGET
+    smoothing: 50
+
+  IncidentGroup:
+    encoding: ONE_HOT
+
+  Is_SpecialService:
+    encoding: BINARY_KEEP
+
+  SpecialServiceType:
+    encoding: TOP_N_PLUS_ONE_HOT
+    top_n: 10
+
+  PropertyCategory:
+    encoding: ONE_HOT
+
+  PropertyType:
+    encoding: LEAVE_ONE_OUT_TARGET
+    smoothing: 30
+
+  IncGeo_BoroughName:
+    encoding: LEAVE_ONE_OUT_TARGET
+    smoothing: 20
+
+  Is_RepeatedCall:
+    encoding: BINARY_KEEP
+
+  Latitude:
+    encoding: NUMERIC_KEEP
+
+  Longitude:
+    encoding: NUMERIC_KEEP
+
+  distance_fire_to_station:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_bucket:
+    encoding: ONE_HOT
+    
+feature_scaling:
+  scaler: STANDARD
+  scale_columns:
+    - CalYear
+    - Month_sin
+    - Month_cos
+    - Weekday_sin
+    - Weekday_cos
+    - Hour_sin
+    - Hour_cos
+    - DeployedFromStation_Name_loo
+    - PropertyType_loo
+    - IncGeo_BoroughName_loo
+    - Latitude
+    - Longitude
+    - distance_fire_to_station

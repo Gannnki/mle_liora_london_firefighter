@@ -7,6 +7,8 @@ import pandas as pd
 from pyproj import Transformer
 
 from DataPreprocessing import DataPreprocesser
+from DataSplitter import DataSplitter
+from FeatureEngineering import FeatureEncoder, FeatureScaler
 # time tracking for preprocessing
 import time
 
@@ -22,6 +24,12 @@ FIRESTATION_COORDS_FILE = BASE_DIR / "utils/station_addresses_with_latlong_corre
 OUTPUT_PATH_MERGED = BASE_DIR / "output/merged_dataset.csv"
 OUTPUT_PATH_INTERMEDIATE = BASE_DIR / "output/intermediate_processed_dataset.csv"
 
+# config for encoder
+CONFIG_PATH = BASE_DIR / "config/pipeline_config.yaml"
+SPLIT_EXPORT_PATH =  BASE_DIR / "output/data_splits"
+ENCODER_EXPORT_PATH = BASE_DIR / "output/encoders"
+SCALER_EXPORT_PATH = BASE_DIR / "output/scalers"
+
 transformer = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
 
 # set pandas display options for better readability
@@ -30,11 +38,50 @@ pd.set_option("display.width", 200)
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 
-
 if __name__ == "__main__":
     # read the truncated data from CSVs
     # to generate the truncated data, please run scripts/truncate_dataset_timebase.py
+    # load the merged dataset
+    merged_df = pd.read_csv(OUTPUT_PATH_MERGED)
 
+    # perform test train validation split and sanity check split
+    splitter = DataSplitter(df=merged_df, config_path=CONFIG_PATH, export_path=SPLIT_EXPORT_PATH, flag_export=False)
+    splitter.run()
+
+    encoder = FeatureEncoder(config_path="config/pipeline_config.yaml")
+    X_train_encoded = encoder.fit_transform(
+        splitter.X_train,
+        splitter.y_train_log
+    )
+
+    # split_name is used to save the encoded splits as attributes in the encoder for later export
+    X_val_encoded = encoder.transform(splitter.X_val, split_name="val")
+    X_test_encoded = encoder.transform(splitter.X_test, split_name="test")
+    X_sanity_encoded = encoder.transform(splitter.X_sanity, split_name="sanity")
+
+    encoder.export_encoded_splits(splitter_target=splitter.target_col, output_dir=ENCODER_EXPORT_PATH)
+    encoder.save_encoder("artifacts/encoders/feature_encoder.pkl")
+
+    # scaler
+    scaler = FeatureScaler(config_path=CONFIG_PATH)
+
+    scaler.fit_transform(encoder.X_train_encoded)
+    scaler.transform(encoder.X_val_encoded, split_name="val")
+    scaler.transform(encoder.X_test_encoded, split_name="test")
+    scaler.transform(encoder.X_sanity_encoded, split_name="sanity")
+
+    scaler.save_scaler("artifacts/scalers/feature_scaler.pkl")
+
+    scaler.export_scaled_splits(
+        splitter_target=splitter.target_col,
+        output_dir=SCALER_EXPORT_PATH
+    )
+
+    # track time end of preprocessing
+    end_time = time.perf_counter()
+    print(f"\nTotal runtime: {end_time - start_time:.2f} seconds")
+
+    """
     mobilisation_df = pd.read_csv(DATA_DIR_TRUNCATED / "mobilisation_truncated.csv")
     incident_df = pd.read_csv(DATA_DIR_TRUNCATED / "incidents_truncated.csv")
 
@@ -49,66 +96,5 @@ if __name__ == "__main__":
 
     # target output path : OUTPUT_PATH_MERGED = BASE_DIR / "output/merged_dataset.csv"
     DataPreprocesser_instance.run(export2csv=True)
-    end_time = time.perf_counter()
-    print(f"\nTotal runtime: {end_time - start_time:.2f} seconds")
-
-    """
-    # test code : 
-    df = pd.read_csv(OUTPUT_PATH_MERGED)
-    print(df["NumCalls"].value_counts(normalize=True))
-
-    call_dist = pd.crosstab(df["NumCalls"], df["IncidentGroup"], normalize='columns')
-    print(call_dist.head(10))
-
-
-    print(df["IncidentGroup"].value_counts(normalize=True))
-    df.groupby("IncidentGroup")["AttendanceTimeSeconds"].describe()
-
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    import numpy as np
-
-    # cap just for visualization
-    viz_df = df.copy()
-    upper = viz_df["AttendanceTimeSeconds"].quantile(0.99)
-    viz_df["AttendanceTimeViz"] = viz_df["AttendanceTimeSeconds"].clip(upper=upper)
-
-    order = ["False Alarm", "Special Service", "Fire"]
-
-    plt.figure(figsize=(11,6))
-
-    sns.violinplot(
-        data=viz_df,
-        x="IncidentGroup",
-        y="AttendanceTimeViz",
-        order=order,
-        inner=None,
-        cut=0
-    )
-
-    sns.boxplot(
-        data=viz_df,
-        x="IncidentGroup",
-        y="AttendanceTimeViz",
-        order=order,
-        width=0.15,
-        showcaps=True,
-        boxprops={'facecolor':'none'},
-        showfliers=False,
-        whiskerprops={'linewidth':1.5}
-    )
-
-    # annotate medians
-    medians = viz_df.groupby("IncidentGroup")["AttendanceTimeViz"].median().reindex(order)
-
-    for i, med in enumerate(medians):
-        plt.text(i, med+15, f"Median={med:.0f}s", ha='center', fontsize=11, fontweight='bold')
-
-    plt.title("Attendance Time Distribution by Incident Group (Capped at 99th Percentile)")
-    plt.xlabel("")
-    plt.ylabel("Attendance Time (Seconds)")
-    plt.show()
-    #high_1000 = df[df['AttendanceTimeSeconds'] > 1000]
-
-    #print(df[df['AttendanceTimeSeconds'] > 1000]['AttendanceTimeSeconds'].value_counts().sort_index().tail(20))
-    """
+    # feature engineering and encoding
+"""
