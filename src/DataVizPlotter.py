@@ -1,21 +1,30 @@
+"""Plotting helpers for exploratory analysis outputs."""
+
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from pathlib import Path
 
 
 class EDAVisualizer:
-    def __init__(self, path):
+    """Create and save common EDA charts to an output directory."""
+
+    def __init__(self, path: str | Path | None):
+        """Initialize the visualizer and configure the default plot style."""
         self.output_dir = Path(path) if path else Path("output/figures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # seaborn style for better aesthetics
         sns.set_theme(style="whitegrid")
 
-    # ==============================
-    # Top Categories
-    # ==============================
-    def plot_top_categories(self, df: pd.DataFrame, col: str, filename: str, top_n=10):
+    def plot_top_categories(
+        self,
+        df: pd.DataFrame,
+        col: str,
+        filename: str,
+        top_n: int = 10,
+    ) -> None:
+        """Save a horizontal bar chart of the most common values in a column."""
         counts = df[col].value_counts().head(top_n)
 
         plt.figure(figsize=(12, 6))
@@ -29,10 +38,14 @@ class EDAVisualizer:
         plt.savefig(self.output_dir / filename)
         plt.close()
 
-    # ==============================
-    # Distribution
-    # ==============================
-    def plot_distribution(self, df: pd.DataFrame, col: str, filename: str, bins=50):
+    def plot_distribution(
+        self,
+        df: pd.DataFrame,
+        col: str,
+        filename: str,
+        bins: int = 50,
+    ) -> None:
+        """Save a histogram and density curve for a numeric column."""
         data = df[col].dropna()
 
         plt.figure(figsize=(10, 6))
@@ -46,7 +59,8 @@ class EDAVisualizer:
         plt.savefig(self.output_dir / filename)
         plt.close()
 
-    def plot_boxplot(self, df: pd.DataFrame, col: str, filename: str):
+    def plot_boxplot(self, df: pd.DataFrame, col: str, filename: str) -> None:
+        """Save a combined violin and box plot for a numeric column."""
         data = df[col].dropna()
 
         plt.figure(figsize=(10, 6))
@@ -60,17 +74,16 @@ class EDAVisualizer:
         plt.tight_layout()
         plt.savefig(self.output_dir / filename)
         plt.close()
-    # ==============================
-    # Grouped Mean
-    # ==============================
+
     def plot_grouped_mean(
         self,
         df: pd.DataFrame,
         group_col: str,
         value_col: str,
         filename: str,
-        top_n=10
-    ):
+        top_n: int = 10,
+    ) -> None:
+        """Save a bar chart of the top grouped mean values."""
         grouped = (
             df.groupby(group_col)[value_col]
             .mean()
@@ -90,10 +103,8 @@ class EDAVisualizer:
         plt.savefig(self.output_dir / filename)
         plt.close()
 
-    # ==============================
-    # Correlation Heatmap
-    # ==============================
-    def plot_correlation(self, df_cols, filename: str):
+    def plot_correlation(self, df_cols: pd.DataFrame, filename: str) -> None:
+        """Save a correlation heatmap for selected numeric columns."""
         corr = df_cols.corr()
 
         plt.figure(figsize=(10, 8))
@@ -105,7 +116,7 @@ class EDAVisualizer:
             cmap="coolwarm",
             square=True,
             cbar=True,
-            linewidths=0.5 
+            linewidths=0.5,
         )
 
         plt.title("Correlation Analysis")
@@ -116,10 +127,13 @@ class EDAVisualizer:
         plt.savefig(self.output_dir / filename)
         plt.close()
 
-    # ==============================
-    # Specific Plots
-    # ==============================
-    def plot_top_boroughs(self, df: pd.DataFrame, filename: str, top_n=10):
+    def plot_top_boroughs(
+        self,
+        df: pd.DataFrame,
+        filename: str,
+        top_n: int = 10,
+    ) -> None:
+        """Save a bar chart for the boroughs with the most incident rows."""
         counts = df["IncGeo_BoroughName"].value_counts().head(top_n)
 
         plt.figure(figsize=(12, 6))
@@ -133,7 +147,13 @@ class EDAVisualizer:
         plt.savefig(self.output_dir / filename)
         plt.close()
 
-    def plot_top_incident_types(self, df: pd.DataFrame, filename: str, top_n=10):
+    def plot_top_incident_types(
+        self,
+        df: pd.DataFrame,
+        filename: str,
+        top_n: int = 10,
+    ) -> None:
+        """Save a bar chart for the most common incident groups."""
         counts = df["IncidentGroup"].value_counts().head(top_n)
 
         plt.figure(figsize=(12, 6))
