@@ -9,3 +9,4 @@ openpyxl
 xlrd
 geopy
 scipy
+catboost
