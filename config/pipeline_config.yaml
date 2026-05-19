@@ -1,5 +1,7 @@
 target_column: AttendanceTimeSeconds
 date_column: DateOfCall
+year_column: CalYear
+month_column: Month
 random_state: 42
 
 drop_columns:
@@ -9,17 +11,14 @@ drop_columns:
   - avg_speed
 
 date_splits:
-  train_start: "2021-01-01"
-  train_end: "2024-12-31"
+  train_start: "2021-01"
+  train_end: "2024-12"
 
-  val_start: "2025-01-01"
-  val_end: "2025-06-30"
+  val_start: "2025-01"
+  val_end: "2025-06"
 
-  test_start: "2025-07-01"
-  test_end: "2025-12-31"
-
-  sanity_start: "2026-01-01"
-  sanity_end: "2026-03-31"
+  test_start: "2025-07"
+  test_end: "2026-02"
 
 feature_encoding:
   CalYear:
@@ -48,7 +47,7 @@ feature_encoding:
 
   DeployedFromStation_Name:
     encoding: LEAVE_ONE_OUT_TARGET
-    smoothing: 50
+    sigma: 0.3
 
   IncidentGroup:
     encoding: ONE_HOT
@@ -65,11 +64,11 @@ feature_encoding:
 
   PropertyType:
     encoding: LEAVE_ONE_OUT_TARGET
-    smoothing: 30
+    sigma: 0.2
 
   IncGeo_BoroughName:
     encoding: LEAVE_ONE_OUT_TARGET
-    smoothing: 20
+    sigma: 0.2
 
   Is_RepeatedCall:
     encoding: BINARY_KEEP

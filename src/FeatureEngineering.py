@@ -213,8 +213,7 @@ class FeatureEncoder:
         return {
             "X_train_encoded": self.X_train_encoded,
             "X_val_encoded": self.X_val_encoded,
-            "X_test_encoded": self.X_test_encoded,
-            "X_sanity_encoded": self.X_sanity_encoded,
+            "X_test_encoded": self.X_test_encoded
         }
     
 class FeatureScaler:
@@ -224,6 +223,7 @@ class FeatureScaler:
 
         scaling_config = self.config.get("feature_scaling", {})
 
+        # here we set as default STANDARD scaler, but it can be easily switched to MINMAX by changing the config file without changing the code
         self.scaler_type = scaling_config.get("scaler", "STANDARD")
         self.scale_columns = scaling_config.get("scale_columns", [])
 
@@ -239,7 +239,6 @@ class FeatureScaler:
         self.X_train_scaled = None
         self.X_val_scaled = None
         self.X_test_scaled = None
-        self.X_sanity_scaled = None
 
     def fit_transform(self, X_train: pd.DataFrame) -> pd.DataFrame:
         X_scaled = X_train.copy()
@@ -292,8 +291,7 @@ class FeatureScaler:
         return {
             "X_train_scaled": self.X_train_scaled,
             "X_val_scaled": self.X_val_scaled,
-            "X_test_scaled": self.X_test_scaled,
-            "X_sanity_scaled": self.X_sanity_scaled,
+            "X_test_scaled": self.X_test_scaled
         }
 
     def save_scaler(self, output_path: str):

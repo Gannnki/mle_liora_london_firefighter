@@ -23,6 +23,7 @@ DISTANCE_FILE = BASE_DIR / "utils/computed_distance.csv"
 FIRESTATION_COORDS_FILE = BASE_DIR / "utils/station_addresses_with_latlong_corrected.csv"
 OUTPUT_PATH_MERGED = BASE_DIR / "output/merged_dataset.csv"
 OUTPUT_PATH_INTERMEDIATE = BASE_DIR / "output/intermediate_processed_dataset.csv"
+DISTANCE_INCLUDED_DATASET_PATH = BASE_DIR / "data/dataset_with_filtered_distance_speed.csv"
 
 # config for encoder
 CONFIG_PATH = BASE_DIR / "config/pipeline_config.yaml"
@@ -42,13 +43,15 @@ if __name__ == "__main__":
     # read the truncated data from CSVs
     # to generate the truncated data, please run scripts/truncate_dataset_timebase.py
     # load the merged dataset
-    merged_df = pd.read_csv(OUTPUT_PATH_MERGED)
+    dataset_df = pd.read_csv(DISTANCE_INCLUDED_DATASET_PATH)
 
     # perform test train validation split and sanity check split
-    splitter = DataSplitter(df=merged_df, config_path=CONFIG_PATH, export_path=SPLIT_EXPORT_PATH, flag_export=False)
+    splitter = DataSplitter(df=dataset_df, config_path=CONFIG_PATH, export_path=SPLIT_EXPORT_PATH, flag_export=False)
     splitter.run()
+    splitter.export_encoded_splits(splitter_target=splitter.target_col,
+        output_dir=SPLIT_EXPORT_PATH)
 
-    encoder = FeatureEncoder(config_path="config/pipeline_config.yaml")
+    encoder = FeatureEncoder(config_path=CONFIG_PATH)
     X_train_encoded = encoder.fit_transform(
         splitter.X_train,
         splitter.y_train_log
@@ -57,7 +60,6 @@ if __name__ == "__main__":
     # split_name is used to save the encoded splits as attributes in the encoder for later export
     X_val_encoded = encoder.transform(splitter.X_val, split_name="val")
     X_test_encoded = encoder.transform(splitter.X_test, split_name="test")
-    X_sanity_encoded = encoder.transform(splitter.X_sanity, split_name="sanity")
 
     encoder.export_encoded_splits(splitter_target=splitter.target_col, output_dir=ENCODER_EXPORT_PATH)
     encoder.save_encoder("artifacts/encoders/feature_encoder.pkl")
@@ -68,8 +70,6 @@ if __name__ == "__main__":
     scaler.fit_transform(encoder.X_train_encoded)
     scaler.transform(encoder.X_val_encoded, split_name="val")
     scaler.transform(encoder.X_test_encoded, split_name="test")
-    scaler.transform(encoder.X_sanity_encoded, split_name="sanity")
-
     scaler.save_scaler("artifacts/scalers/feature_scaler.pkl")
 
     scaler.export_scaled_splits(
