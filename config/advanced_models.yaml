@@ -7,26 +7,35 @@ models:
       n_jobs: -1
       tree_method: hist
       objective: reg:squarederror
-      colsample_bytree: 0.9140703845572055
-      learning_rate: 0.04993475643167195
-      max_depth: 10
-      n_estimators: 343
-      subsample: 0.836965827544817
+      eval_metric: mae
+      colsample_bytree: 0.85
+      gamma: 0.05
+      learning_rate: 0.04
+      max_depth: 8
+      min_child_weight: 5
+      n_estimators: 900
+      reg_alpha: 0.1
+      reg_lambda: 3.0
+      subsample: 0.85
     grid_search:
       enabled: true
       method: randomized
-      n_iter: 5
+      n_iter: 24
       cv: 2
       scoring: neg_mean_absolute_error
       n_jobs: 1
       verbose: 1
       random_state: 42
       param_distributions:
-        n_estimators: [280, 343, 400]
-        max_depth: [8, 10, 12]
-        learning_rate: [0.04, 0.04993475643167195, 0.06]
-        colsample_bytree: [0.85, 0.9140703845572055, 0.98]
-        subsample: [0.78, 0.836965827544817, 0.9]
+        n_estimators: [650, 800, 950, 1100, 1300]
+        max_depth: [6, 7, 8, 9, 10]
+        learning_rate: [0.025, 0.035, 0.045, 0.06]
+        min_child_weight: [1, 3, 5, 8, 12]
+        subsample: [0.75, 0.82, 0.88, 0.95]
+        colsample_bytree: [0.7, 0.8, 0.9, 1.0]
+        gamma: [0, 0.03, 0.1, 0.2]
+        reg_alpha: [0, 0.05, 0.1, 0.5, 1.0]
+        reg_lambda: [1.0, 2.0, 4.0, 8.0]
 
   - name: LightGBM
     type: LGBMRegressor
@@ -34,28 +43,36 @@ models:
       random_state: 42
       n_jobs: -1
       verbose: -1
-      colsample_bytree: 0.9579309401710595
-      learning_rate: 0.12957999576221704
-      max_depth: 11
-      n_estimators: 370
-      num_leaves: 91
-      subsample: 0.8281775897621597
+      colsample_bytree: 0.85
+      learning_rate: 0.04
+      max_depth: 10
+      min_child_samples: 60
+      n_estimators: 1100
+      num_leaves: 63
+      reg_alpha: 0.1
+      reg_lambda: 1.0
+      subsample: 0.85
+      subsample_freq: 1
     grid_search:
       enabled: true
       method: randomized
-      n_iter: 5
+      n_iter: 28
       cv: 2
       scoring: neg_mean_absolute_error
       n_jobs: 1
       verbose: 1
       random_state: 42
       param_distributions:
-        n_estimators: [300, 370, 430]
-        num_leaves: [63, 91, 127]
-        max_depth: [9, 11, 13]
-        learning_rate: [0.1, 0.12957999576221704, 0.16]
-        colsample_bytree: [0.9, 0.9579309401710595, 1.0]
-        subsample: [0.78, 0.8281775897621597, 0.9]
+        n_estimators: [700, 900, 1100, 1400, 1700]
+        num_leaves: [31, 47, 63, 95, 127]
+        max_depth: [-1, 8, 10, 12, 14]
+        learning_rate: [0.025, 0.035, 0.05, 0.07]
+        min_child_samples: [20, 40, 60, 100, 150]
+        colsample_bytree: [0.7, 0.8, 0.9, 1.0]
+        subsample: [0.75, 0.82, 0.88, 0.95]
+        subsample_freq: [1]
+        reg_alpha: [0, 0.05, 0.1, 0.5, 1.0]
+        reg_lambda: [0.5, 1.0, 2.0, 5.0, 10.0]
 
   - name: CatBoost
     type: CatBoostRegressor
@@ -64,21 +81,25 @@ models:
       thread_count: -1
       verbose: 0
       loss_function: RMSE
-      depth: 7
-      iterations: 363
-      l2_leaf_reg: 3
-      learning_rate: 0.19186408041575642
+      bagging_temperature: 0.5
+      depth: 8
+      iterations: 1000
+      l2_leaf_reg: 5
+      learning_rate: 0.05
+      random_strength: 1.0
     grid_search:
       enabled: true
       method: randomized
-      n_iter: 5
+      n_iter: 20
       cv: 2
       scoring: neg_mean_absolute_error
       n_jobs: 1
       verbose: 1
       random_state: 42
       param_distributions:
-        iterations: [300, 363, 430]
-        depth: [6, 7, 8]
-        l2_leaf_reg: [2, 3, 5]
-        learning_rate: [0.15, 0.19186408041575642, 0.22]
+        iterations: [700, 900, 1100, 1400]
+        depth: [6, 7, 8, 9]
+        learning_rate: [0.035, 0.05, 0.07, 0.1]
+        l2_leaf_reg: [2, 3, 5, 8, 12]
+        bagging_temperature: [0, 0.25, 0.5, 1.0]
+        random_strength: [0.5, 1.0, 2.0, 5.0]

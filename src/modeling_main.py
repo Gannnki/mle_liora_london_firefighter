@@ -36,6 +36,7 @@ def main():
     )
 
     model_trainer.load_models(PATH_advanced_model_config)
+    print("\nAdvanced model training begins:")
     results = model_trainer.run_models()
 
     print("\nAdvanced model results:")
