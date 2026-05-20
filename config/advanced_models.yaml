@@ -1,0 +1,84 @@
+models:
+
+  - name: XGBoost
+    type: XGBRegressor
+    params:
+      random_state: 42
+      n_jobs: -1
+      tree_method: hist
+      objective: reg:squarederror
+      colsample_bytree: 0.9140703845572055
+      learning_rate: 0.04993475643167195
+      max_depth: 10
+      n_estimators: 343
+      subsample: 0.836965827544817
+    grid_search:
+      enabled: true
+      method: randomized
+      n_iter: 5
+      cv: 2
+      scoring: neg_mean_absolute_error
+      n_jobs: 1
+      verbose: 1
+      random_state: 42
+      param_distributions:
+        n_estimators: [280, 343, 400]
+        max_depth: [8, 10, 12]
+        learning_rate: [0.04, 0.04993475643167195, 0.06]
+        colsample_bytree: [0.85, 0.9140703845572055, 0.98]
+        subsample: [0.78, 0.836965827544817, 0.9]
+
+  - name: LightGBM
+    type: LGBMRegressor
+    params:
+      random_state: 42
+      n_jobs: -1
+      verbose: -1
+      colsample_bytree: 0.9579309401710595
+      learning_rate: 0.12957999576221704
+      max_depth: 11
+      n_estimators: 370
+      num_leaves: 91
+      subsample: 0.8281775897621597
+    grid_search:
+      enabled: true
+      method: randomized
+      n_iter: 5
+      cv: 2
+      scoring: neg_mean_absolute_error
+      n_jobs: 1
+      verbose: 1
+      random_state: 42
+      param_distributions:
+        n_estimators: [300, 370, 430]
+        num_leaves: [63, 91, 127]
+        max_depth: [9, 11, 13]
+        learning_rate: [0.1, 0.12957999576221704, 0.16]
+        colsample_bytree: [0.9, 0.9579309401710595, 1.0]
+        subsample: [0.78, 0.8281775897621597, 0.9]
+
+  - name: CatBoost
+    type: CatBoostRegressor
+    params:
+      random_seed: 42
+      thread_count: -1
+      verbose: 0
+      loss_function: RMSE
+      depth: 7
+      iterations: 363
+      l2_leaf_reg: 3
+      learning_rate: 0.19186408041575642
+    grid_search:
+      enabled: true
+      method: randomized
+      n_iter: 5
+      cv: 2
+      scoring: neg_mean_absolute_error
+      n_jobs: 1
+      verbose: 1
+      random_state: 42
+      param_distributions:
+        iterations: [300, 363, 430]
+        depth: [6, 7, 8]
+        l2_leaf_reg: [2, 3, 5]
+        learning_rate: [0.15, 0.19186408041575642, 0.22]

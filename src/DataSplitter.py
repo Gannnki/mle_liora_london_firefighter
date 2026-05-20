@@ -124,9 +124,8 @@ class DataSplitter:
             "y_test_log": self.y_test_log,
         }
     
-    def export_encoded_splits(self):
-        export_to_csv(
-            self.get_encoded_export_objects(),
+    def export_encoded_splits(self, splitter_target: str, output_dir: str):
+        export_to_csv(self.get_split_export_objects(),
             target_col=splitter_target,
             output_dir=output_dir)
 

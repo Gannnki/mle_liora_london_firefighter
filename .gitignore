@@ -123,6 +123,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+
+# from training algorithms
+catboost_info/
 # Project specific resource directories
 lfb_downloads/
 lfb_converted/
@@ -131,3 +134,4 @@ output/
 utils/
 artifacts/
 data/
+models/
