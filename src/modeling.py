@@ -2,6 +2,7 @@ import yaml
 import joblib
 import numpy as np
 import pandas as pd
+import re
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
@@ -9,6 +10,7 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
     r2_score,
+    mean_squared_log_error
 )
 from sklearn.base import clone
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
@@ -98,6 +100,8 @@ class ModelTrainer:
             index_col=0,
         )
 
+        self._sanitize_feature_names()
+
         # original targets
         self.y_train = pd.read_csv(
             self.path_y_train,
@@ -115,6 +119,44 @@ class ModelTrainer:
         self.y_test_log = pd.read_csv(
             self.path_y_test_log,
         ).squeeze()
+
+    def _sanitize_feature_names(self):
+        if list(self.X_train.columns) != list(self.X_test.columns):
+            raise ValueError(
+                "Train and test feature columns do not match before training."
+            )
+
+        sanitized_columns = self._make_safe_feature_names(
+            self.X_train.columns
+        )
+
+        self.X_train.columns = sanitized_columns
+        self.X_test.columns = sanitized_columns
+
+    @staticmethod
+    def _make_safe_feature_names(columns):
+        safe_columns = []
+        seen = {}
+
+        for column in columns:
+            safe_name = re.sub(
+                r"[^0-9A-Za-z_]+",
+                "_",
+                str(column),
+            ).strip("_")
+
+            if not safe_name:
+                safe_name = "feature"
+
+            count = seen.get(safe_name, 0)
+            seen[safe_name] = count + 1
+
+            if count:
+                safe_name = f"{safe_name}_{count}"
+
+            safe_columns.append(safe_name)
+
+        return safe_columns
 
     def load_models(self, path_model_config):
         self.path_model_config = path_model_config
@@ -163,13 +205,15 @@ class ModelTrainer:
 
             fixed_metrics = self._evaluate_predictions(
                 fixed_model,
+                self.X_test,
+                self.y_test,
             )
 
             print(f"\nFixed-parameter result for {model_name}:")
             print(
-                f"MAE={fixed_metrics['MAE']}, "
-                f"RMSE={fixed_metrics['RMSE']}, "
-                f"R2 Score={fixed_metrics['R2 Score']}"
+                f"Test MAE={fixed_metrics['MAE']}, "
+                f"Test RMSE={fixed_metrics['RMSE']}, "
+                f"Test R2 Score={fixed_metrics['R2 Score']}"
             )
             search_method = grid_search_config.get(
                 "method",
@@ -223,85 +267,192 @@ class ModelTrainer:
 
         self.fitted_models[model_name] = model
 
-        metrics = self._evaluate_predictions(
+        train_metrics = self._evaluate_predictions(
             model,
+            self.X_train,
+            self.y_train,
+        )
+
+        test_metrics = self._evaluate_predictions(
+            model,
+            self.X_test,
+            self.y_test,
         )
 
         return {
             "Model": model_name,
-            **metrics,
+            "Train MAE": train_metrics["MAE"],
+            "Train RMSE": train_metrics["RMSE"],
+            "Train R2 Score": train_metrics["R2 Score"],
+            "Test MAE": test_metrics["MAE"],
+            "Test RMSE": test_metrics["RMSE"],
+            "Test R2 Score": test_metrics["R2 Score"],
+            "Test RMSLE": test_metrics["RMSLE"],
+            "Test P90": test_metrics['P90 absolute error'],
             "Best Params": best_params,
         }
 
     def _evaluate_predictions(
         self,
         model,
+        X,
+        y,
     ):
-        # predictions in log-space
-        y_pred_log = model.predict(
-            self.X_test
-        )
-
-        # inverse log transform
-        y_pred = np.expm1(
-            y_pred_log
+        y_pred = self._predict_original_scale(
+            model,
+            X,
         )
 
         mae = mean_absolute_error(
-            self.y_test,
+            y,
             y_pred,
         )
 
         rmse = np.sqrt(
             mean_squared_error(
-                self.y_test,
+                y,
                 y_pred,
             )
         )
 
         r2 = r2_score(
-            self.y_test,
+            y,
             y_pred,
         )
+
+        rmsle = np.sqrt(mean_squared_log_error(y, np.maximum(y_pred, 0)))
+
+        p90_error = np.percentile(np.abs(y-y_pred), 90)
 
         return {
             "MAE": round(mae, 2),
             "RMSE": round(rmse, 2),
             "R2 Score": round(r2, 4),
+            "RMSLE": round(rmsle, 2),
+            "P90 absolute error": round(p90_error, 4)
         }
+
+    @staticmethod
+    def _predict_original_scale(
+        model,
+        X,
+    ):
+        # Model is trained on log1p(target), so predictions are converted back.
+        y_pred_log = model.predict(
+            X
+        )
+
+        return np.expm1(
+            y_pred_log
+        )
+
+    def save_predictions(
+        self,
+        model_name,
+        output_path,
+        dataset="test",
+    ):
+        if model_name not in self.fitted_models:
+            raise ValueError(
+                f"Model '{model_name}' has not been fitted."
+            )
+
+        if dataset == "train":
+            X = self.X_train
+            y = self.y_train
+        elif dataset == "test":
+            X = self.X_test
+            y = self.y_test
+        else:
+            raise ValueError(
+                "dataset must be either 'train' or 'test'."
+            )
+
+        y_pred = self._predict_original_scale(
+            self.fitted_models[model_name],
+            X,
+        )
+
+        df_predictions = pd.DataFrame(
+            {
+                "actual": y.to_numpy(),
+                "prediction": y_pred,
+            }
+        )
+
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        df_predictions.to_csv(
+            output_path,
+            index=False,
+        )
+
+        return df_predictions
 
     def naive_baseline(self):
 
-        y_pred_naive = np.full(
+        y_train_pred_naive = np.full(
+            len(self.y_train),
+            self.y_train.mean(),
+        )
+
+        y_test_pred_naive = np.full(
             len(self.y_test),
             self.y_train.mean(),
         )
 
         return {
             "Model": "Naive Baseline (Mean)",
-            "MAE": round(
+            "Train MAE": round(
                 mean_absolute_error(
-                    self.y_test,
-                    y_pred_naive,
+                    self.y_train,
+                    y_train_pred_naive,
                 ),
                 2,
             ),
-            "RMSE": round(
+            "Train RMSE": round(
                 np.sqrt(
                     mean_squared_error(
-                        self.y_test,
-                        y_pred_naive,
+                        self.y_train,
+                        y_train_pred_naive,
                     )
                 ),
                 2,
             ),
-            "R2 Score": round(
+            "Train R2 Score": round(
                 r2_score(
-                    self.y_test,
-                    y_pred_naive,
+                    self.y_train,
+                    y_train_pred_naive,
                 ),
                 4,
             ),
+            "Test MAE": round(
+                mean_absolute_error(
+                    self.y_test,
+                    y_test_pred_naive,
+                ),
+                2,
+            ),
+            "Test RMSE": round(
+                np.sqrt(
+                    mean_squared_error(
+                        self.y_test,
+                        y_test_pred_naive,
+                    )
+                ),
+                2,
+            ),
+            "Test R2 Score": round(
+                r2_score(
+                    self.y_test,
+                    y_test_pred_naive,
+                ),
+                4,
+            ),
+            "Best Params": None,
         }
 
     def run_models(self):
@@ -322,7 +473,7 @@ class ModelTrainer:
         df_results = (
             pd.DataFrame(results)
             .sort_values(
-                "R2 Score",
+                "Test R2 Score",
                 ascending=False,
             )
         )
@@ -333,7 +484,7 @@ class ModelTrainer:
         self,
         results,
         output_path,
-        metric="R2 Score",
+        metric="Test R2 Score",
     ):
         model_results = results[
             results["Model"].isin(self.fitted_models)

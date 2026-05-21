@@ -45,9 +45,12 @@ feature_encoding:
   Is_Public_Holiday:
     encoding: BINARY_KEEP
 
+  Is_central_London:
+    encoding: BINARY_KEEP
+
   DeployedFromStation_Name:
     encoding: LEAVE_ONE_OUT_TARGET
-    sigma: 0.3
+    sigma: 0.1
 
   IncidentGroup:
     encoding: ONE_HOT
@@ -64,11 +67,11 @@ feature_encoding:
 
   PropertyType:
     encoding: LEAVE_ONE_OUT_TARGET
-    sigma: 0.2
+    sigma: 0.1
 
   IncGeo_BoroughName:
     encoding: LEAVE_ONE_OUT_TARGET
-    sigma: 0.2
+    sigma: 0.1
 
   Is_RepeatedCall:
     encoding: BINARY_KEEP
@@ -80,6 +83,9 @@ feature_encoding:
     encoding: NUMERIC_KEEP
 
   distance_fire_to_station:
+    encoding: NUMERIC_KEEP
+
+  distance_to_city_center_km:
     encoding: NUMERIC_KEEP
 
   NumOfCalls_bucket:
@@ -101,3 +107,4 @@ feature_scaling:
     - Latitude
     - Longitude
     - distance_fire_to_station
+    - distance_to_city_center_km

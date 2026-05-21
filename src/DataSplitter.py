@@ -131,6 +131,7 @@ class DataSplitter:
 
     def add_new_features(self):
         self.add_inner_london_feature()
+        self.add_more_distance_features()
     
     def add_inner_london_feature(self):
         inner_london = [
@@ -139,3 +140,41 @@ class DataSplitter:
     'HAMMERSMITH AND FULHAM', 'WANDSWORTH', 'LEWISHAM', 'NEWHAM', 'HARINGEY'
 ]
         self.df['Is_central_London'] = self.df['IncGeo_BoroughName'].isin(inner_london).astype(int)
+    
+    def add_more_distance_features(self):
+        # add distance to london center (Charing Cross) as a feature, using the Haversine formula
+        # coordinates of Charing Cross  
+        print("Adding distance to city center feature...")      
+        charing_cross_lat = 51.5074
+        charing_cross_lon = -0.1278
+
+        self.df["distance_to_city_center_km"] = haversine_distance(
+        self.df["Latitude"],
+        self.df["Longitude"],
+        charing_cross_lat,
+        charing_cross_lon
+                            )
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate distance between two lat/lon points in kilometers.
+    Works with scalars, pandas Series, or numpy arrays.
+    """
+    R = 6371  # Earth radius in kilometers
+
+    lat1 = np.radians(lat1)
+    lon1 = np.radians(lon1)
+    lat2 = np.radians(lat2)
+    lon2 = np.radians(lon2)
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = (
+        np.sin(dlat / 2) ** 2
+        + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+    )
+
+    c = 2 * np.arcsin(np.sqrt(a))
+
+    return R * c

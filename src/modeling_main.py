@@ -20,7 +20,10 @@ PATH_y_test = BASE_DIR / "output/data_splits/y_test.csv"
 
 PATH_baseline_model_config = BASE_DIR / "config/baseline_models.yaml"
 PATH_advanced_model_config = BASE_DIR / "config/advanced_models.yaml"
+PATH_xgboost_model_config = BASE_DIR / "config/xgboost_only.yaml"
+
 PATH_best_model = BASE_DIR / "artifacts/best_models/best_model.pkl"
+PATH_y_pred = BASE_DIR / "output/predictions/y_pred_test.csv"
 
 
 def main():
@@ -35,7 +38,7 @@ def main():
         PATH_y_test,
     )
 
-    model_trainer.load_models(PATH_advanced_model_config)
+    model_trainer.load_models(PATH_xgboost_model_config)
     print("\nAdvanced model training begins:")
     results = model_trainer.run_models()
 
@@ -47,6 +50,13 @@ def main():
         PATH_best_model,
     )
     print(f"\nSaved best model ({best_model_name}) to: {PATH_best_model}")
+
+    model_trainer.save_predictions(
+        best_model_name,
+        PATH_y_pred,
+        dataset="test",
+    )
+    print(f"Saved test predictions to: {PATH_y_pred}")
 
     elapsed_time = time.perf_counter() - start_time
     print(f"\nFinished in {elapsed_time:.2f} seconds.")
