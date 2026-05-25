@@ -48,9 +48,8 @@ feature_encoding:
   Is_central_London:
     encoding: BINARY_KEEP
 
-  DeployedFromStation_Name:
-    encoding: LEAVE_ONE_OUT_TARGET
-    sigma: 0.1
+  #DeployedFromStation_Name:
+  #  encoding: ONE_HOT
 
   IncidentGroup:
     encoding: ONE_HOT
@@ -65,12 +64,12 @@ feature_encoding:
   PropertyCategory:
     encoding: ONE_HOT
 
-  PropertyType:
-    encoding: LEAVE_ONE_OUT_TARGET
-    sigma: 0.1
+  #PropertyType:
+  #  encoding: ONE_HOT
+  #  sigma: 0.1
 
   IncGeo_BoroughName:
-    encoding: LEAVE_ONE_OUT_TARGET
+    encoding: ONE_HOT
     sigma: 0.1
 
   Is_RepeatedCall:
@@ -88,8 +87,92 @@ feature_encoding:
   distance_to_city_center_km:
     encoding: NUMERIC_KEEP
 
+  distance_sqrt:
+    encoding: NUMERIC_KEEP
+
+  distance_squared:
+    encoding: NUMERIC_KEEP
+
+  concurrent_same_borough:
+    encoding: NUMERIC_KEEP
+
   NumOfCalls_bucket:
-    encoding: ONE_HOT
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_ord:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_log:
+    encoding: NUMERIC_KEEP
+
+  risk_property_outdoor:
+    encoding: BINARY_KEEP
+
+  risk_property_road_vehicle:
+    encoding: BINARY_KEEP
+
+  risk_property_outdoor_structure:
+    encoding: BINARY_KEEP
+
+  risk_many_calls:
+    encoding: BINARY_KEEP
+
+  risk_very_many_calls:
+    encoding: BINARY_KEEP
+
+  risk_special_service:
+    encoding: BINARY_KEEP
+
+  risk_fire:
+    encoding: BINARY_KEEP
+
+  risk_noncentral:
+    encoding: BINARY_KEEP
+
+  risk_repeated_call:
+    encoding: BINARY_KEEP
+
+  risk_weekday_4:
+    encoding: BINARY_KEEP
+
+  risk_weekday_2:
+    encoding: BINARY_KEEP
+
+  risk_month_3_5_6:
+    encoding: BINARY_KEEP
+
+  risk_not_nightshift:
+    encoding: BINARY_KEEP
+
+  risk_not_weekend:
+    encoding: BINARY_KEEP
+
+  high_residual_risk_score:
+    encoding: NUMERIC_KEEP
+
+  many_calls_x_outdoor:
+    encoding: BINARY_KEEP
+
+  many_calls_x_road_vehicle:
+    encoding: BINARY_KEEP
+
+  many_calls_x_special:
+    encoding: BINARY_KEEP
+
+  many_calls_x_noncentral:
+    encoding: BINARY_KEEP
+
+  road_vehicle_x_noncentral:
+    encoding: BINARY_KEEP
+
+  outdoor_x_noncentral:
+    encoding: BINARY_KEEP
+
+  repeated_x_many_calls:
+    encoding: BINARY_KEEP
+
+  fire_x_many_calls:
+    encoding: BINARY_KEEP
     
 feature_scaling:
   scaler: STANDARD
@@ -101,10 +184,25 @@ feature_scaling:
     - Weekday_cos
     - Hour_sin
     - Hour_cos
-    - DeployedFromStation_Name_loo
-    - PropertyType_loo
-    - IncGeo_BoroughName_loo
+    #- DeployedFromStation_Name_loo
+    #- PropertyType_loo
+    #- IncGeo_BoroughName_loo
     - Latitude
     - Longitude
     - distance_fire_to_station
     - distance_to_city_center_km
+    - distance_sqrt
+    - distance_squared
+    - concurrent_same_borough
+    - NumOfCalls_bucket
+    - NumOfCalls_ord
+    - NumOfCalls_log
+    - high_residual_risk_score
+    - many_calls_x_outdoor
+    - many_calls_x_road_vehicle
+    - many_calls_x_special
+    - many_calls_x_noncentral
+    - road_vehicle_x_noncentral
+    - outdoor_x_noncentral
+    - repeated_x_many_calls
+    - fire_x_many_calls

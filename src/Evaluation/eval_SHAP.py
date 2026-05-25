@@ -9,7 +9,7 @@ from pathlib import Path
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 PATH_TO_MODEL = BASE_DIR / "artifacts/best_models/best_model.pkl"
 
@@ -197,6 +197,8 @@ def run_shap_analysis(
         X_explain,
     )
 
+    shap_values = _convert_log1p_shap_to_original_scale(shap_values)
+
     # global feature importance
     shap.plots.bar(
         shap_values,
@@ -229,6 +231,11 @@ def run_shap_analysis(
 
     plt.close()
 
+    _save_percent_importance_plot(
+        shap_values,
+        output_dir,
+    )
+
     return shap_values
 
 
@@ -242,6 +249,117 @@ def _ensure_numeric_float_frame(X):
         )
 
     return X.astype(float)
+
+
+def _convert_log1p_shap_to_original_scale(shap_values):
+    """Approximate log1p-target SHAP values on the original target scale.
+
+    The trained model predicts log1p(AttendanceTimeSeconds). SHAP values are
+    additive in that log space, so the raw SHAP plot is hard to read as seconds.
+    This rescales each row so:
+
+        expm1(base_log) + sum(shap_seconds) = expm1(prediction_log)
+
+    That keeps the explanation additive on the original response-time scale.
+    """
+
+    values_log = np.asarray(
+        shap_values.values,
+        dtype=float,
+    )
+
+    base_values_log = np.asarray(
+        shap_values.base_values,
+        dtype=float,
+    )
+
+    if base_values_log.ndim == 0:
+        base_values_log = np.full(
+            values_log.shape[0],
+            float(base_values_log),
+        )
+
+    log_delta = values_log.sum(axis=1)
+    base_values_original = np.expm1(base_values_log)
+    prediction_original = np.expm1(base_values_log + log_delta)
+    original_delta = prediction_original - base_values_original
+
+    scale = np.divide(
+        original_delta,
+        log_delta,
+        out=np.exp(base_values_log),
+        where=np.abs(log_delta) > 1e-12,
+    )
+
+    values_original = values_log * scale[:, np.newaxis]
+
+    return shap.Explanation(
+        values=values_original,
+        base_values=base_values_original,
+        data=shap_values.data,
+        display_data=getattr(shap_values, "display_data", None),
+        feature_names=shap_values.feature_names,
+        instance_names=getattr(shap_values, "instance_names", None),
+        output_names=getattr(shap_values, "output_names", None),
+    )
+
+
+def _save_percent_importance_plot(
+    shap_values,
+    output_dir,
+    max_features=20,
+):
+    mean_abs_shap = np.abs(shap_values.values).mean(axis=0)
+    total_importance = mean_abs_shap.sum()
+
+    if total_importance == 0:
+        percentages = np.zeros_like(mean_abs_shap)
+    else:
+        percentages = mean_abs_shap / total_importance * 100
+
+    feature_importance = pd.DataFrame(
+        {
+            "feature": shap_values.feature_names,
+            "mean_abs_shap_seconds": mean_abs_shap,
+            "importance_percent": percentages,
+        }
+    ).sort_values(
+        "importance_percent",
+        ascending=False,
+    )
+
+    csv_path = output_dir / "shap_feature_importance_percent.csv"
+    feature_importance.to_csv(
+        csv_path,
+        index=False,
+    )
+
+    plot_data = feature_importance.head(max_features).sort_values(
+        "importance_percent",
+        ascending=True,
+    )
+
+    plt.figure(figsize=(10, 7))
+    plt.barh(
+        plot_data["feature"],
+        plot_data["importance_percent"],
+        color="steelblue",
+    )
+    plt.xlabel("Share of mean absolute SHAP value (%)")
+    plt.title("SHAP Feature Importance (% of Total)")
+    plt.grid(axis="x", alpha=0.3)
+    plt.tight_layout()
+
+    percent_plot_path = output_dir / "shap_feature_importance_percent.png"
+    plt.savefig(
+        percent_plot_path,
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close()
+
+    print(f"Saved percent SHAP importance to: {percent_plot_path}")
+    print(f"Saved percent SHAP importance CSV to: {csv_path}")
 
 
 if __name__ == "__main__":

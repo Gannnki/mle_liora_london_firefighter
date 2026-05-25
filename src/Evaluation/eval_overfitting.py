@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 path_X_train = BASE_DIR / "output/scalers/X_train_scaled.csv"
 path_y_train = BASE_DIR / "output/data_splits/y_train_log.csv"
 path_X_test = BASE_DIR / "output/scalers/X_test_scaled.csv"

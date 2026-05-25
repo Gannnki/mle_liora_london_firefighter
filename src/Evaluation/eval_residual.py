@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 PATH_y_pred = BASE_DIR / "output/predictions/y_pred_test.csv"
 PATH_X_test = BASE_DIR / "output/data_splits/X_test.csv"
 

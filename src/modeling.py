@@ -1,5 +1,6 @@
 import yaml
 import joblib
+import inspect
 import numpy as np
 import pandas as pd
 import re
@@ -28,6 +29,14 @@ OPTIONAL_MODEL_IMPORTS = {
     "LGBMRegressor": ("lightgbm", "LGBMRegressor"),
     "CatBoostRegressor": ("catboost", "CatBoostRegressor"),
 }
+
+EVAL_SET_MODEL_MODULES = {
+    "catboost",
+    "lightgbm",
+    "xgboost",
+}
+
+DEFAULT_EARLY_STOPPING_ROUNDS = 50
 
 
 def get_model_class(model_type):
@@ -64,30 +73,35 @@ class ModelTrainer:
     def __init__(
         self,
         path_X_train,
-        path_X_test,
-
+        path_X_validation,
         path_y_train_log,
-        path_y_test_log,
-
+        path_y_validation_log,
         path_y_train,
-        path_y_test,
+        path_y_validation,
 
-        path_model_config=None
+        path_model_config=None,
+        high_target_weight_quantile=0.90,
+        high_target_weight=3.0,
     ):
 
         self.path_X_train = path_X_train
-        self.path_X_test = path_X_test
+        self.path_X_validation = path_X_validation
 
         self.path_y_train_log = path_y_train_log
-        self.path_y_test_log = path_y_test_log
+        self.path_y_validation_log = path_y_validation_log
 
         self.path_y_train = path_y_train
-        self.path_y_test = path_y_test
+        self.path_y_validation = path_y_validation
         # Initialisation of the path to the model configuration file
         self.path_model_config =path_model_config
         self.fitted_models = {}
+        self.high_target_weight_quantile = high_target_weight_quantile
+        self.high_target_weight = high_target_weight
 
         self.load_data()
+        
+        self._create_sample_weights()
+        
 
     def load_data(self):
         self.X_train = pd.read_csv(
@@ -95,8 +109,8 @@ class ModelTrainer:
             index_col=0,
         )
 
-        self.X_test = pd.read_csv(
-            self.path_X_test,
+        self.X_validation = pd.read_csv(
+            self.path_X_validation,
             index_col=0,
         )
 
@@ -107,8 +121,8 @@ class ModelTrainer:
             self.path_y_train,
         ).squeeze()
 
-        self.y_test = pd.read_csv(
-            self.path_y_test,
+        self.y_validation = pd.read_csv(
+            self.path_y_validation,
         ).squeeze()
 
         # log targets
@@ -116,14 +130,39 @@ class ModelTrainer:
             self.path_y_train_log,
         ).squeeze()
 
-        self.y_test_log = pd.read_csv(
-            self.path_y_test_log,
+        self.y_validation_log = pd.read_csv(
+            self.path_y_validation_log,
         ).squeeze()
 
+    def _create_sample_weights(self):
+        self.high_target_threshold = self.y_train.quantile(
+            self.high_target_weight_quantile
+        )
+
+        self.sample_weight = np.ones(
+            len(self.y_train),
+            dtype=float,
+        )
+        self.sample_weight[self.y_train >= self.high_target_threshold] = (
+            self.high_target_weight
+        )
+
+        high_target_count = int(
+            (self.y_train >= self.high_target_threshold).sum()
+        )
+
+        print(
+            "Sample weights: "
+            f"target >= q{self.high_target_weight_quantile:.2f} "
+            f"({self.high_target_threshold:.2f}) gets weight "
+            f"{self.high_target_weight:.2f} "
+            f"[{high_target_count:,}/{len(self.y_train):,} rows]"
+        )
+
     def _sanitize_feature_names(self):
-        if list(self.X_train.columns) != list(self.X_test.columns):
+        if list(self.X_train.columns) != list(self.X_validation.columns):
             raise ValueError(
-                "Train and test feature columns do not match before training."
+                "Train and validation feature columns do not match before training."
             )
 
         sanitized_columns = self._make_safe_feature_names(
@@ -131,7 +170,7 @@ class ModelTrainer:
         )
 
         self.X_train.columns = sanitized_columns
-        self.X_test.columns = sanitized_columns
+        self.X_validation.columns = sanitized_columns
 
     @staticmethod
     def _make_safe_feature_names(columns):
@@ -198,22 +237,19 @@ class ModelTrainer:
 
         if grid_search_config and grid_search_config.get("enabled", False):
             fixed_model = clone(model)
-            fixed_model.fit(
-                self.X_train,
-                self.y_train_log,
-            )
+            self._fit_model(fixed_model)
 
             fixed_metrics = self._evaluate_predictions(
                 fixed_model,
-                self.X_test,
-                self.y_test,
+                self.X_validation,
+                self.y_validation,
             )
 
             print(f"\nFixed-parameter result for {model_name}:")
             print(
-                f"Test MAE={fixed_metrics['MAE']}, "
-                f"Test RMSE={fixed_metrics['RMSE']}, "
-                f"Test R2 Score={fixed_metrics['R2 Score']}"
+                f"Validation MAE={fixed_metrics['MAE']}, "
+                f"Validation RMSE={fixed_metrics['RMSE']}, "
+                f"Validation R2 Score={fixed_metrics['R2 Score']}"
             )
             search_method = grid_search_config.get(
                 "method",
@@ -251,19 +287,19 @@ class ModelTrainer:
                     verbose=grid_search_config.get("verbose", 1),
                 )
 
+            sample_weight_fit_kwargs = self._sample_weight_fit_kwargs(model)
+
             search.fit(
                 self.X_train,
                 self.y_train_log,
+                **sample_weight_fit_kwargs,
             )
 
             model = search.best_estimator_
             best_params = search.best_params_
+            self._fit_model(model)
         else:
-            # train on log-transformed target
-            model.fit(
-                self.X_train,
-                self.y_train_log,
-            )
+            self._fit_model(model)
 
         self.fitted_models[model_name] = model
 
@@ -273,10 +309,10 @@ class ModelTrainer:
             self.y_train,
         )
 
-        test_metrics = self._evaluate_predictions(
+        validation_metrics = self._evaluate_predictions(
             model,
-            self.X_test,
-            self.y_test,
+            self.X_validation,
+            self.y_validation,
         )
 
         return {
@@ -284,13 +320,84 @@ class ModelTrainer:
             "Train MAE": train_metrics["MAE"],
             "Train RMSE": train_metrics["RMSE"],
             "Train R2 Score": train_metrics["R2 Score"],
-            "Test MAE": test_metrics["MAE"],
-            "Test RMSE": test_metrics["RMSE"],
-            "Test R2 Score": test_metrics["R2 Score"],
-            "Test RMSLE": test_metrics["RMSLE"],
-            "Test P90": test_metrics['P90 absolute error'],
+            "Validation MAE": validation_metrics["MAE"],
+            "Validation RMSE": validation_metrics["RMSE"],
+            "Validation R2 Score": validation_metrics["R2 Score"],
+            "Validation RMSLE": validation_metrics["RMSLE"],
+            "Validation P90": validation_metrics['P90 absolute error'],
             "Best Params": best_params,
         }
+
+    def _fit_model(
+        self,
+        model,
+    ):
+        fit_kwargs = {}
+
+        if self._supports_eval_set(model):
+            self._configure_early_stopping(model)
+            fit_kwargs["eval_set"] = [
+                (self.X_train, self.y_train_log),
+                (self.X_validation, self.y_validation_log),
+            ]
+
+        fit_kwargs.update(
+            self._sample_weight_fit_kwargs(model)
+        )
+
+        model.fit(
+            self.X_train,
+            self.y_train_log,
+            **fit_kwargs,
+        )
+
+    def _sample_weight_fit_kwargs(
+        self,
+        model,
+    ):
+        if not self._supports_fit_parameter(
+            model,
+            "sample_weight",
+        ):
+            return {}
+
+        return {
+            "sample_weight": self.sample_weight,
+        }
+
+    @staticmethod
+    def _supports_fit_parameter(
+        model,
+        parameter_name,
+    ):
+        try:
+            fit_signature = inspect.signature(model.fit)
+        except (TypeError, ValueError):
+            return False
+
+        return parameter_name in fit_signature.parameters
+
+    @staticmethod
+    def _supports_eval_set(model):
+        model_module = model.__class__.__module__.split(".")[0]
+        return model_module in EVAL_SET_MODEL_MODULES
+
+    @staticmethod
+    def _configure_early_stopping(model):
+        model_module = model.__class__.__module__.split(".")[0]
+        params = model.get_params()
+
+        if model_module in {"catboost", "xgboost"}:
+            if params.get("early_stopping_rounds") is None:
+                model.set_params(
+                    early_stopping_rounds=DEFAULT_EARLY_STOPPING_ROUNDS,
+                )
+
+        if model_module == "lightgbm":
+            if params.get("early_stopping_round") is None:
+                model.set_params(
+                    early_stopping_round=DEFAULT_EARLY_STOPPING_ROUNDS,
+                )
 
     def _evaluate_predictions(
         self,
@@ -350,7 +457,7 @@ class ModelTrainer:
         self,
         model_name,
         output_path,
-        dataset="test",
+        dataset="validation",
     ):
         if model_name not in self.fitted_models:
             raise ValueError(
@@ -360,12 +467,12 @@ class ModelTrainer:
         if dataset == "train":
             X = self.X_train
             y = self.y_train
-        elif dataset == "test":
-            X = self.X_test
-            y = self.y_test
+        elif dataset in {"validation", "val"}:
+            X = self.X_validation
+            y = self.y_validation
         else:
             raise ValueError(
-                "dataset must be either 'train' or 'test'."
+                "dataset must be either 'train' or 'validation'."
             )
 
         y_pred = self._predict_original_scale(
@@ -399,8 +506,8 @@ class ModelTrainer:
             self.y_train.mean(),
         )
 
-        y_test_pred_naive = np.full(
-            len(self.y_test),
+        y_validation_pred_naive = np.full(
+            len(self.y_validation),
             self.y_train.mean(),
         )
 
@@ -429,26 +536,26 @@ class ModelTrainer:
                 ),
                 4,
             ),
-            "Test MAE": round(
+            "Validation MAE": round(
                 mean_absolute_error(
-                    self.y_test,
-                    y_test_pred_naive,
+                    self.y_validation,
+                    y_validation_pred_naive,
                 ),
                 2,
             ),
-            "Test RMSE": round(
+            "Validation RMSE": round(
                 np.sqrt(
                     mean_squared_error(
-                        self.y_test,
-                        y_test_pred_naive,
+                        self.y_validation,
+                        y_validation_pred_naive,
                     )
                 ),
                 2,
             ),
-            "Test R2 Score": round(
+            "Validation R2 Score": round(
                 r2_score(
-                    self.y_test,
-                    y_test_pred_naive,
+                    self.y_validation,
+                    y_validation_pred_naive,
                 ),
                 4,
             ),
@@ -473,7 +580,7 @@ class ModelTrainer:
         df_results = (
             pd.DataFrame(results)
             .sort_values(
-                "Test R2 Score",
+                "Validation R2 Score",
                 ascending=False,
             )
         )
@@ -484,7 +591,7 @@ class ModelTrainer:
         self,
         results,
         output_path,
-        metric="Test R2 Score",
+        metric="Validation R2 Score",
     ):
         model_results = results[
             results["Model"].isin(self.fitted_models)
