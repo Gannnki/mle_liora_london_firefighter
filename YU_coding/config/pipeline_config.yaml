@@ -1,0 +1,170 @@
+target_column: AttendanceTimeSeconds
+date_column: DateOfCall
+year_column: CalYear
+month_column: Month
+random_state: 42
+
+drop_columns:
+  - IncidentNumber
+  - PumpOrder
+  - NumCalls
+  - avg_speed
+
+date_splits:
+  train_start: "2021-01"
+  train_end: "2024-12"
+
+  val_start: "2025-01"
+  val_end: "2025-06"
+
+  test_start: "2025-07"
+  test_end: "2026-02"
+
+feature_encoding:
+
+
+  CalYear:
+    encoding: NUMERIC_KEEP
+
+  Month:
+    encoding: CYCLIC
+
+  Weekday:
+    encoding: CYCLIC
+
+  Hour:
+    encoding: CYCLIC
+
+  Is_Nightshift:
+    encoding: BINARY_KEEP
+
+  Is_Rush_Hour:
+    encoding: BINARY_KEEP
+
+  Is_Weekend:
+    encoding: BINARY_KEEP
+
+  Is_Public_Holiday:
+    encoding: BINARY_KEEP
+
+  Is_central_London:
+    encoding: BINARY_KEEP
+
+  #DeployedFromStation_Name:
+  #  encoding: LEAVE_ONE_OUT_TARGET
+  #  sigma: 0.1
+
+# for native encoding add: CATEGORY_KEEP for the columns instedt of ONE_HOT
+  DeployedFromStation_Name:
+    encoding: ONE_HOT
+
+  IncidentGroup:
+    encoding: ONE_HOT
+
+  Is_SpecialService:
+    encoding: BINARY_KEEP
+
+  SpecialServiceType:
+    encoding: ONE_HOT
+    top_n: 10
+
+  PropertyCategory:
+    encoding: ONE_HOT
+
+  #PropertyType:
+  #  encoding: LEAVE_ONE_OUT_TARGET
+  #  sigma: 0.1
+  PropertyType:
+    encoding: ONE_HOT
+  
+  #IncGeo_BoroughName:
+  #  encoding: LEAVE_ONE_OUT_TARGET
+  #  sigma: 0.1
+
+  IncGeo_BoroughName:
+    encoding: ONE_HOT
+
+  Is_RepeatedCall:
+    encoding: BINARY_KEEP
+
+  Latitude:
+    encoding: NUMERIC_KEEP
+
+  Longitude:
+    encoding: NUMERIC_KEEP
+
+  distance_fire_to_station:
+    encoding: NUMERIC_KEEP
+
+  distance_to_city_center_km:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_bucket:
+    encoding: ONE_HOT
+
+  # --- rolling window features ---
+  station_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+  borough_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+  borough_rolling_max_last_3:
+    encoding: NUMERIC_KEEP 
+  
+  # --- rolling window features 2 ---
+  station_inertia_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+  borough_inertia_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+  borough_inertia_rolling_max_last_3:
+    encoding: NUMERIC_KEEP
+
+  # --- rolling window features 3  ---
+  expected_time_by_station_inertia:
+    encoding: NUMERIC_KEEP
+  expected_time_by_borough_inertia:
+    encoding: NUMERIC_KEEP
+  
+  weather_temp_bucket:
+    encoding: ONE_HOT
+  weather_rain_bucket:
+    encoding: ONE_HOT
+  weather_snow_bucket:
+    encoding: ONE_HOT
+  rain_rush_hour_bucket:
+    encoding: ONE_HOT
+  road_ice_bucket:
+    encoding: ONE_HOT
+
+#When changing LOO to OneHOt or the other way, the list of the columns need to be adjusted
+
+feature_scaling:
+  scaler: STANDARD
+  scale_columns:
+    - CalYear
+    - Month_sin
+    - Month_cos
+    - Weekday_sin
+    - Weekday_cos
+    - Hour_sin
+    - Hour_cos
+   # - DeployedFromStation_Name_loo
+   # - PropertyType_loo
+   # - IncGeo_BoroughName_loo
+    - Latitude
+    - Longitude
+    - distance_fire_to_station
+    - distance_to_city_center_km
+
+    # rolling windwos 1
+    - station_rolling_mean_last_3
+    - borough_rolling_mean_last_3
+    - borough_rolling_max_last_3
+    
+    # rolling windwos 2
+    - station_inertia_rolling_mean_last_3
+    - borough_inertia_rolling_mean_last_3
+    - borough_inertia_rolling_max_last_3
+    
+    # rolling windwos 3
+    - expected_time_by_station_inertia
+    - expected_time_by_borough_inertia
