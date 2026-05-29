@@ -1,0 +1,43 @@
+data_path: data/dataset_with_filtered_distance_speed.csv
+pipeline_config_path: config/pipeline_config.yaml
+output_dir: output/torch_lstm
+model_path: artifacts/best_models/torch_lstm_model.pt
+
+lookback_hours: 24
+max_rows:
+device: auto
+random_state: 42
+
+model:
+  lstm_units: 64
+  dense_units: 32
+  tabular_hidden_units: 512
+  combined_hidden_units: 128
+  num_layers: 1
+  dropout: 0.2
+
+tabular:
+  enabled: true
+  X_train_path: output/scalers/X_train_scaled.csv
+  X_val_path: output/scalers/X_val_scaled.csv
+  X_test_path: output/scalers/X_test_scaled.csv
+
+training:
+  epochs: 30
+  batch_size: 512
+  learning_rate: 0.001
+  weight_decay: 0.0
+  patience: 5
+  num_workers: 0
+
+sequence_features:
+  - incident_count
+  - mean_attendance_seconds
+  - mean_distance_fire_to_station
+  - repeated_call_rate
+  - special_service_rate
+  - false_alarm_count
+  - fire_count
+  - special_service_count
+  - rush_hour_rate
+  - nightshift_rate

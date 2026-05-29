@@ -1,0 +1,30 @@
+data_path: data/dataset_with_filtered_distance_speed.csv
+pipeline_config_path: config/pipeline_config.yaml
+output_dir: output/dl_lstm
+model_path: artifacts/best_models/lstm_model.keras
+
+lookback_hours: 24
+max_rows:
+
+model:
+  lstm_units: 64
+  dense_units: 32
+  dropout: 0.2
+  learning_rate: 0.001
+
+training:
+  epochs: 30
+  batch_size: 512
+  patience: 5
+
+sequence_features:
+  - incident_count
+  - mean_attendance_seconds
+  - mean_distance_fire_to_station
+  - repeated_call_rate
+  - special_service_rate
+  - false_alarm_count
+  - fire_count
+  - special_service_count
+  - rush_hour_rate
+  - nightshift_rate

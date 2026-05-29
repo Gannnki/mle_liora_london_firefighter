@@ -1,41 +1,40 @@
-# load the csvs from data folder
-import os
+"""Data loading helpers for CSV and Excel files."""
+
+from pathlib import Path
+
 import pandas as pd
 
+
 class DataLoader:
-    def __init__(self, data_dir, loader_config=None):
-        self.data_dir = data_dir
+    """Load tabular files from a configured base data directory."""
+
+    def __init__(self, data_dir: str | Path, loader_config: bool | None = None):
+        """Initialize the loader with a data directory and optional quiet mode."""
+        self.data_dir = Path(data_dir)
+        self.base_dir = self.data_dir
         self.loader_config = loader_config
 
     def load_data(self):
-        # Implement logic to load CSV files from the data directory
+        """Placeholder for project-specific data loading logic."""
         pass
 
     def load_csv(self, relative_path: str) -> pd.DataFrame:
+        """Load a CSV file relative to the base data directory."""
         file_path = self.base_dir / relative_path
-        return pd.read_csv(file_path)
+        return pd.read_csv(file_path, low_memory=False)
 
-    def load_excel(self, relative_path: str, sheet_name=0) -> pd.DataFrame:
+    def load_excel(self, relative_path: str, sheet_name: str | int = 0) -> pd.DataFrame:
+        """Load an Excel sheet relative to the base data directory."""
         file_path = self.base_dir / relative_path
         return pd.read_excel(file_path, sheet_name=sheet_name)
-    
+
     def load_all_csv_in_folder(
         self,
-        folder= False,
+        folder: str | Path | bool = False,
         recursive: bool = False,
-        add_source: bool = True
+        add_source: bool = True,
     ) -> pd.DataFrame:
-        """
-        Load all CSV files from a folder and concatenate into one DataFrame.
-
-        Args:
-            folder (str): subfolder under base_dir (e.g. 'incidents')
-            recursive (bool): whether to search subdirectories
-            add_source (bool): whether to add source file column
-
-        Returns:
-            pd.DataFrame
-        """
+        """Load all CSV files in a folder and concatenate them into one DataFrame."""
         if not folder:
             folder_path = self.data_dir
         else:
@@ -55,7 +54,7 @@ class DataLoader:
 
         for file in files:
             try:
-                df = pd.read_csv(file)
+                df = pd.read_csv(file, low_memory=False)
 
                 if add_source:
                     df["source_file"] = file.name

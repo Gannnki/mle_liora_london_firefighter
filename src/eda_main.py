@@ -1,13 +1,15 @@
-# main program to run the project
-from DataLoader import DataLoader
-from ConsistencyChecker import CSVConsistencyChecker
-from DataVizPlotter import EDAVisualizer
-from pathlib import Path
-import warnings
+"""Run EDA and consistency checks for the London Fire Brigade datasets."""
+
 from io import StringIO
 import os
+from pathlib import Path
+from typing import Literal
+import warnings
 
-# ignore warnings
+from ConsistencyChecker import CSVConsistencyChecker
+from DataLoader import DataLoader
+from DataVizPlotter import EDAVisualizer
+
 warnings.filterwarnings("ignore")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,18 +18,19 @@ DATA_DIR_MOBILISATION = BASE_DIR / "lfb_converted/mobilisation"
 OUTPUT_DIR_FIGS = BASE_DIR / "output/figures"
 
 
-def check_consistency(data_dir: Path):
+def check_consistency(data_dir: Path) -> None:
+    """Print and save consistency checks for all CSV files in a directory."""
     checker = CSVConsistencyChecker(data_dir)
-    # can be printed out to debug
-    summary_df = checker.summarize_files()
+    checker.summarize_files()
     checker.check_schema_consistency()
     checker.check_dtype_consistency()
     checker.check_null_ratio()
 
-    # dump results to txt report 
     checker.write_report()
 
-def load_data():
+
+def load_data() -> tuple:
+    """Load incident and mobilisation CSV files into DataFrames."""
     try:
         incident_loader = DataLoader(DATA_DIR_INCIDENTS, loader_config=True)
         incident_df = incident_loader.load_all_csv_in_folder()
@@ -40,28 +43,31 @@ def load_data():
         raise
 
 
-def eda_overview(df, name="DataFrame", mode="print_and_save"):
+def eda_overview(
+    df,
+    name: str = "DataFrame",
+    mode: Literal["print_and_save", "print_only", "save_only"] = "print_and_save",
+) -> None:
+    """Print and/or save a compact exploratory summary for a DataFrame."""
     if mode not in ["print_and_save", "print_only", "save_only"]:
         raise ValueError("Invalid mode. Choose from 'print_and_save', 'print_only', 'save_only'.")
 
-    # ---------- PRINT ----------
     if mode in ["print_and_save", "print_only"]:
         print(f"--- EDA Overview: {name} ---")
         print("Shape:", df.shape)
 
         print("\nInfo:")
-        df.info()  
+        df.info()
 
         print("\nMissing Values:")
         print(df.isnull().sum())
 
         print("\nDescriptive Statistics:")
-        print(df.describe(include='all'))
+        print(df.describe(include="all"))
 
         print("\nSample Data:")
         print(df.head())
 
-    # ---------- SAVE ----------
     if mode in ["print_and_save", "save_only"]:
         os.makedirs("output", exist_ok=True)
 
@@ -80,13 +86,11 @@ def eda_overview(df, name="DataFrame", mode="print_and_save"):
 
             # descriptive statistics
             f.write("Descriptive Statistics:\n")
-            f.write(df.describe(include='all').to_string() + "\n\n")
+            f.write(df.describe(include="all").to_string() + "\n\n")
 
             # sample data
             f.write("Sample Data:\n")
             f.write(df.head().to_string() + "\n")
-
-
 
 
 if __name__ == "__main__":
@@ -107,48 +111,54 @@ if __name__ == "__main__":
 
     visualizer = EDAVisualizer(OUTPUT_DIR_FIGS)
     visualizer.plot_top_boroughs(
-    incident_df,
-    "incident_top_boroughs.png"
-)
-    
+        incident_df,
+        "incident_top_boroughs.png",
+    )
+
     visualizer.plot_top_incident_types(
-    incident_df,
-    "incident_top_incident_types.png"
-)
-    
+        incident_df,
+        "incident_top_incident_types.png",
+    )
+
     visualizer.plot_distribution(
-    mobilisation_df,
-    "AttendanceTimeSeconds",
-    "response_time_hist_mobilisation.png"
-)
-    
+        mobilisation_df,
+        "AttendanceTimeSeconds",
+        "response_time_hist_mobilisation.png",
+    )
+
     visualizer.plot_distribution(
-    incident_df,
-    "FirstPumpArriving_AttendanceTime",
-    "response_time_hist_incidents.png"
-)
-    
+        incident_df,
+        "FirstPumpArriving_AttendanceTime",
+        "response_time_hist_incidents.png",
+    )
+
     visualizer.plot_boxplot(
-    incident_df,
-    "FirstPumpArriving_AttendanceTime",
-    "response_time_boxplot_incidents.png"
-)
-    
-    #  "AttendanceTimeSeconds" in mobilisation dataset
-    core_columns = ["AttendanceTimeSeconds", "TurnoutTimeSeconds", "TravelTimeSeconds", "PumpOrder", "DelayCodeId", "HourOfCall"]
+        incident_df,
+        "FirstPumpArriving_AttendanceTime",
+        "response_time_boxplot_incidents.png",
+    )
+
+    core_columns = [
+        "AttendanceTimeSeconds",
+        "TurnoutTimeSeconds",
+        "TravelTimeSeconds",
+        "PumpOrder",
+        "DelayCodeId",
+        "HourOfCall",
+    ]
     visualizer.plot_correlation(mobilisation_df[core_columns], "correlation_matrix_mobi.png")
 
-    #  "AttendanceTimeSeconds" in mobilisation dataset
-    # avoid categorical cols
     core_columns_incidents = [
-    "FirstPumpArriving_AttendanceTime",
-    "NumPumpsAttending",
-    "NumStationsWithPumpsAttending",
-    "PumpCount",
-    "NumCalls",
-    "HourOfCall",
-    "Easting_rounded",
-    "Northing_rounded"
-]
-    visualizer.plot_correlation(incident_df[core_columns_incidents], "correlation_matrix_incidents.png")
-    
+        "FirstPumpArriving_AttendanceTime",
+        "NumPumpsAttending",
+        "NumStationsWithPumpsAttending",
+        "PumpCount",
+        "NumCalls",
+        "HourOfCall",
+        "Easting_rounded",
+        "Northing_rounded",
+    ]
+    visualizer.plot_correlation(
+        incident_df[core_columns_incidents],
+        "correlation_matrix_incidents.png",
+    )
