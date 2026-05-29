@@ -80,8 +80,6 @@ class ModelTrainer:
         path_y_validation,
 
         path_model_config=None,
-        high_target_weight_quantile=0.90,
-        high_target_weight=3.0,
     ):
 
         self.path_X_train = path_X_train
@@ -95,12 +93,10 @@ class ModelTrainer:
         # Initialisation of the path to the model configuration file
         self.path_model_config =path_model_config
         self.fitted_models = {}
-        self.high_target_weight_quantile = high_target_weight_quantile
-        self.high_target_weight = high_target_weight
 
         self.load_data()
         
-        self._create_sample_weights()
+        # self._create_sample_weights()
         
 
     def load_data(self):
@@ -134,30 +130,24 @@ class ModelTrainer:
             self.path_y_validation_log,
         ).squeeze()
 
-    def _create_sample_weights(self):
-        self.high_target_threshold = self.y_train.quantile(
-            self.high_target_weight_quantile
-        )
-
-        self.sample_weight = np.ones(
-            len(self.y_train),
-            dtype=float,
-        )
-        self.sample_weight[self.y_train >= self.high_target_threshold] = (
-            self.high_target_weight
-        )
-
-        high_target_count = int(
-            (self.y_train >= self.high_target_threshold).sum()
-        )
-
-        print(
-            "Sample weights: "
-            f"target >= q{self.high_target_weight_quantile:.2f} "
-            f"({self.high_target_threshold:.2f}) gets weight "
-            f"{self.high_target_weight:.2f} "
-            f"[{high_target_count:,}/{len(self.y_train):,} rows]"
-        )
+    # def _create_sample_weights(self):
+    #     self.sample_weight = np.ones(
+    #         len(self.y_train),
+    #         dtype=float,
+    #     )
+    #     self.sample_weight[self.y_train < 100] = 1.8
+    #     self.sample_weight[self.y_train > 400] = 2.5
+    #
+    #     low_target_count = int((self.y_train < 100).sum())
+    #     high_target_count = int((self.y_train > 400).sum())
+    #
+    #     print(
+    #         "Sample weights: "
+    #         f"target < 100 gets weight 1.80 "
+    #         f"[{low_target_count:,}/{len(self.y_train):,} rows], "
+    #         f"target > 400 gets weight 2.5 "
+    #         f"[{high_target_count:,}/{len(self.y_train):,} rows]"
+    #     )
 
     def _sanitize_feature_names(self):
         if list(self.X_train.columns) != list(self.X_validation.columns):
@@ -234,14 +224,26 @@ class ModelTrainer:
         grid_search_config=None,
     ):
         best_params = None
+        X_train_fit = self.X_train.to_numpy(dtype=np.float32, copy=False)
+        X_validation_fit = self.X_validation.to_numpy(dtype=np.float32, copy=False)
+        y_train_log_fit = self.y_train_log.to_numpy(dtype=np.float32, copy=False)
+        y_validation_log_fit = self.y_validation_log.to_numpy(dtype=np.float32, copy=False)
 
         if grid_search_config and grid_search_config.get("enabled", False):
             fixed_model = clone(model)
-            self._fit_model(fixed_model)
+            self._fit_model(
+                fixed_model,
+                X_train=X_train_fit,
+                y_train_log=y_train_log_fit,
+                eval_X_train=X_train_fit,
+                eval_y_train_log=y_train_log_fit,
+                eval_X_validation=X_validation_fit,
+                eval_y_validation_log=y_validation_log_fit,
+            )
 
             fixed_metrics = self._evaluate_predictions(
                 fixed_model,
-                self.X_validation,
+                X_validation_fit,
                 self.y_validation,
             )
 
@@ -287,31 +289,52 @@ class ModelTrainer:
                     verbose=grid_search_config.get("verbose", 1),
                 )
 
-            sample_weight_fit_kwargs = self._sample_weight_fit_kwargs(model)
+            # sample_weight_fit_kwargs = self._sample_weight_fit_kwargs(model)
+            X_search, y_search = self._search_training_data(
+                X_train_fit,
+                y_train_log_fit,
+                grid_search_config,
+            )
 
             search.fit(
-                self.X_train,
-                self.y_train_log,
-                **sample_weight_fit_kwargs,
+                X_search,
+                y_search,
+                # **sample_weight_fit_kwargs,
             )
 
             model = search.best_estimator_
             best_params = search.best_params_
-            self._fit_model(model)
+            self._fit_model(
+                model,
+                X_train=X_train_fit,
+                y_train_log=y_train_log_fit,
+                eval_X_train=X_train_fit,
+                eval_y_train_log=y_train_log_fit,
+                eval_X_validation=X_validation_fit,
+                eval_y_validation_log=y_validation_log_fit,
+            )
         else:
-            self._fit_model(model)
+            self._fit_model(
+                model,
+                X_train=X_train_fit,
+                y_train_log=y_train_log_fit,
+                eval_X_train=X_train_fit,
+                eval_y_train_log=y_train_log_fit,
+                eval_X_validation=X_validation_fit,
+                eval_y_validation_log=y_validation_log_fit,
+            )
 
         self.fitted_models[model_name] = model
 
         train_metrics = self._evaluate_predictions(
             model,
-            self.X_train,
+            X_train_fit,
             self.y_train,
         )
 
         validation_metrics = self._evaluate_predictions(
             model,
-            self.X_validation,
+            X_validation_fit,
             self.y_validation,
         )
 
@@ -328,54 +351,100 @@ class ModelTrainer:
             "Best Params": best_params,
         }
 
+    @staticmethod
+    def _search_training_data(
+        X_train,
+        y_train,
+        grid_search_config,
+    ):
+        sample_rows = grid_search_config.get("search_sample_rows")
+        if sample_rows is None or sample_rows >= X_train.shape[0]:
+            return X_train, y_train
+
+        random_state = grid_search_config.get("random_state", 42)
+        rng = np.random.default_rng(random_state)
+        indices = np.sort(
+            rng.choice(
+                X_train.shape[0],
+                size=sample_rows,
+                replace=False,
+            )
+        )
+
+        print(
+            "Randomized search using sampled training rows: "
+            f"{sample_rows:,}/{X_train.shape[0]:,}"
+        )
+        return X_train[indices], y_train[indices]
+
     def _fit_model(
         self,
         model,
+        X_train=None,
+        y_train_log=None,
+        eval_X_train=None,
+        eval_y_train_log=None,
+        eval_X_validation=None,
+        eval_y_validation_log=None,
     ):
         fit_kwargs = {}
+        X_train = self.X_train if X_train is None else X_train
+        y_train_log = self.y_train_log if y_train_log is None else y_train_log
+        eval_X_train = self.X_train if eval_X_train is None else eval_X_train
+        eval_y_train_log = (
+            self.y_train_log if eval_y_train_log is None else eval_y_train_log
+        )
+        eval_X_validation = (
+            self.X_validation if eval_X_validation is None else eval_X_validation
+        )
+        eval_y_validation_log = (
+            self.y_validation_log
+            if eval_y_validation_log is None
+            else eval_y_validation_log
+        )
 
         if self._supports_eval_set(model):
             self._configure_early_stopping(model)
             fit_kwargs["eval_set"] = [
-                (self.X_train, self.y_train_log),
-                (self.X_validation, self.y_validation_log),
+                (eval_X_train, eval_y_train_log),
+                (eval_X_validation, eval_y_validation_log),
             ]
 
-        fit_kwargs.update(
-            self._sample_weight_fit_kwargs(model)
-        )
+        # fit_kwargs.update(
+        #     self._sample_weight_fit_kwargs(model)
+        # )
 
         model.fit(
-            self.X_train,
-            self.y_train_log,
+            X_train,
+            y_train_log,
             **fit_kwargs,
         )
 
-    def _sample_weight_fit_kwargs(
-        self,
-        model,
-    ):
-        if not self._supports_fit_parameter(
-            model,
-            "sample_weight",
-        ):
-            return {}
-
-        return {
-            "sample_weight": self.sample_weight,
-        }
-
-    @staticmethod
-    def _supports_fit_parameter(
-        model,
-        parameter_name,
-    ):
-        try:
-            fit_signature = inspect.signature(model.fit)
-        except (TypeError, ValueError):
-            return False
-
-        return parameter_name in fit_signature.parameters
+    # def _sample_weight_fit_kwargs(
+    #     self,
+    #     model,
+    # ):
+    #     if not self._supports_fit_parameter(
+    #         model,
+    #         "sample_weight",
+    #     ):
+    #         return {}
+    #
+    #     return {
+    #         "sample_weight": self.sample_weight,
+    #     }
+    #
+    # @staticmethod
+    # def _supports_fit_parameter(
+    #     model,
+    #     parameter_name,
+    # ):
+    #     try:
+    #         fit_signature = inspect.signature(model.fit)
+    #     except (TypeError, ValueError):
+    #         return False
+    #
+    #     return parameter_name in fit_signature.parameters
 
     @staticmethod
     def _supports_eval_set(model):

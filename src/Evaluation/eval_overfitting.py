@@ -40,11 +40,28 @@ y_test = pd.read_csv(
 ).squeeze("columns")
 
 model = clone(best_model)
+if hasattr(model, "set_params"):
+    model_params = model.get_params()
+    params_to_disable = {}
+
+    if "early_stopping_rounds" in model_params:
+        params_to_disable["early_stopping_rounds"] = None
+
+    if "early_stopping_round" in model_params:
+        params_to_disable["early_stopping_round"] = None
+
+    if params_to_disable:
+        model.set_params(**params_to_disable)
 
 y_train_shuffled = np.random.permutation(y_train.to_numpy())
 
-model.fit(X_train, y_train_shuffled)
-pred = model.predict(X_test)
+model.fit(
+    X_train.to_numpy(dtype=np.float32, copy=False),
+    y_train_shuffled.astype(np.float32, copy=False),
+)
+pred = model.predict(
+    X_test.to_numpy(dtype=np.float32, copy=False)
+)
 
 print("Shuffled target R2:", r2_score(y_test, pred))
 print("Shuffled target MAE:", mean_absolute_error(y_test, pred))

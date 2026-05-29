@@ -48,14 +48,14 @@ def main():
     # print(model_trainer.fitted_models["XGBoost"].evals_result())
 
 
-    best_model_name = model_trainer.save_best_model(
+    best_model_name = model_trainer.save_best_model( 
         results,
         PATH_best_model,
     )
     print(f"\nSaved best model ({best_model_name}) to: {PATH_best_model}")
 
     model_trainer.save_predictions(
-        best_model_name,
+        best_model_name, 
         PATH_y_pred,
         dataset="validation",
     )
