@@ -185,7 +185,7 @@ with col7:
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col8:
-    st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">🔗 Incident Feature Correlation Matrix</div>', unsafe_allow_html=True)
     try:
         st.image("data_streamlit/correlation_matrix_incidents.png", use_container_width=True)
