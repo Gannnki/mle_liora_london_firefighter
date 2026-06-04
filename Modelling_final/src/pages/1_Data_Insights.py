@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inject custom modern CSS with crisp white cards on the light blue background
+# Inject custom modern CSS 
 st.markdown("""
     <style>
     /* Styling for the white dashboard cards with subtle shadow */
@@ -110,7 +110,7 @@ with col4:
     try:
         st.image("data_streamlit/incident_types_hourly.png", use_container_width=True)
         
-        # Professional caption based on the actual line chart trends
+   
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> All three incident categories follow a highly synchronized diurnial pattern. 
@@ -133,7 +133,7 @@ with col5:
     try:
         st.image("data_streamlit/turnout_time_hourly.png", use_container_width=True)
         
-        # Professional caption reflecting the structural night shift slowdown
+        
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> The graph uncovers a severe <b>night shift effect</b> on turnout times. 
@@ -151,7 +151,7 @@ with col6:
     try:
         st.image("data_streamlit/response_time_hist.png", use_container_width=True)
         
-        # Professional caption justifying the log-transform decision
+
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> The target variable exhibits a heavily <b>right-skewed distribution</b>, peaking around <b>300 seconds (5 minutes)</b> with a long tail of extreme outliers. 
@@ -173,7 +173,7 @@ with col7:
     try:
         st.image("data_streamlit/correlation_matrix_mobi.png", use_container_width=True)
         
-        # Professional caption based on your specific matrix values
+        
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> The near-perfect linear correlation of <b>0.96</b> between <i>AttendanceTimeSeconds</i> and <i>TravelTimeSeconds</i> is purely <b>structural</b>, as response time is natively defined as the sum of turnout and travel duration. 
@@ -190,7 +190,7 @@ with col8:
     try:
         st.image("data_streamlit/correlation_matrix_incidents.png", use_container_width=True)
         
-        # Professional caption highlighting the non-linear justification for XGBoost
+        
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> The primary target variable (<i>FirstPumpArriving_AttendanceTime</i>) shows near-zero linear correlation with all structural features. This directly justifies using a non-linear ensemble algorithm like <b>XGBoost</b>, as linear models fail to capture these complex interactions. 

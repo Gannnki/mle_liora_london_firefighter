@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inject custom modern CSS with crisp white cards on the light blue background
+# Inject custom modern CSS 
 st.markdown("""
     <style>
     .dashboard-card {
@@ -114,7 +114,7 @@ st.markdown('<div class="card-title">🎯 1. Global Feature Importance Baseline<
 st.write("This global split importance illustrates the absolute mathematical weight each engineered feature contributes across all XGBoost trees:")
 
 try:
-    # Updated to match your filename: shap_feature_importance_percent.png
+    
     st.image("data_streamlit/shap_feature_importance_percent.png", use_container_width=True)
     
     st.markdown("""
@@ -141,7 +141,7 @@ with col_shap1:
     st.write("SHAP Impact: Red indicates high feature values, blue indicates low values. Visualizes how variables accelerate or delay predictions:")
     
     try:
-        # Updated to match your filename: shap_beeswarm.png
+     
         st.image("data_streamlit/shap_beeswarm.png", use_container_width=True)
         
         st.markdown("""
@@ -163,7 +163,7 @@ with col_shap2:
     st.write("Advanced diagnostic plotting comparing prediction errors (Residuals) against actual target values:")
     
     try:
-        # Updated to match your filename: residual_plot.png
+       
         st.image("data_streamlit/residual_plot.png", use_container_width=True)
         
         st.markdown("""

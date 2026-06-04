@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom SaaS-style CSS for modern white cards with soft shadows
+# Custom SaaS-style CSS 
 st.markdown("""
     <style>
     .dashboard-card {
@@ -49,7 +49,7 @@ with st.container(border=True):
 
 st.write("")
 
-# Displaying each limitation in an elegant, native sidebar-info box layout
+# Displaying each limitation in an native sidebar-info box layout
 col_lim1, col_lim2, col_lim3 = st.columns(3)
 
 with col_lim1:
