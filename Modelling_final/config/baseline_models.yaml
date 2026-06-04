@@ -1,0 +1,34 @@
+models:
+  - name: Random Forest (Simple)
+    type: RandomForestRegressor
+    params:
+      random_state: 42
+      n_jobs: -1
+    grid_search:
+      enabled: true
+      cv: 2
+      scoring: neg_mean_absolute_error
+      n_jobs: -1
+      verbose: 1
+      param_grid:
+        n_estimators: [50, 100]
+        max_depth: [10, 20]
+        min_samples_leaf: [1]
+
+  - name: Linear Regression
+    type: LinearRegression
+    params: {}
+
+  - name: KNN Regressor
+    type: KNeighborsRegressor
+    params:
+      n_jobs: -1
+    grid_search:
+      enabled: true
+      cv: 2
+      scoring: neg_mean_absolute_error
+      n_jobs: -1
+      verbose: 1
+      param_grid:
+        n_neighbors: [5]
+        weights: [uniform]

@@ -1,0 +1,481 @@
+target_column: AttendanceTimeSeconds
+date_column: DateOfCall
+year_column: CalYear
+month_column: Month
+random_state: 42
+station_coordinates_path: utils/station_addresses_with_latlong_corrected.csv
+borough_intersection_features_path: utils/borough_intersection_features.csv
+intersections_path: utils/london_intersections_27700.gpkg
+
+drop_columns:
+  - IncidentNumber
+  - PumpOrder
+  - NumCalls
+  - avg_speed
+  - incident_hour
+
+date_splits:
+  train_start: "2021-01"
+  train_end: "2024-12"
+
+  val_start: "2025-01"
+  val_end: "2025-06"
+
+  test_start: "2025-07"
+  test_end: "2026-02"
+
+feature_encoding:
+  CalYear:
+    encoding: NUMERIC_KEEP
+
+  Month:
+    encoding: CYCLIC
+
+  Weekday:
+    encoding: CYCLIC
+
+  Hour:
+    encoding: CYCLIC
+
+  Is_Nightshift:
+    encoding: BINARY_KEEP
+
+  Is_Rush_Hour:
+    encoding: BINARY_KEEP
+
+  Is_Weekend:
+    encoding: BINARY_KEEP
+
+  Is_Public_Holiday:
+    encoding: BINARY_KEEP
+
+  Is_central_London:
+    encoding: BINARY_KEEP
+
+  DeployedFromStation_Name:
+    encoding: ONE_HOT
+
+  IncidentGroup:
+    encoding: ONE_HOT
+
+  Is_SpecialService:
+    encoding: BINARY_KEEP
+
+  SpecialServiceType:
+    encoding: TOP_N_PLUS_ONE_HOT
+    top_n: 10
+
+  PropertyCategory:
+    encoding: ONE_HOT
+
+  PropertyType:
+    encoding: ONE_HOT
+    sigma: 0.1
+
+  property_access_complexity:
+    encoding: BINARY_KEEP
+
+  IncGeo_BoroughName:
+    encoding: ONE_HOT
+    sigma: 0.1
+
+  Is_RepeatedCall:
+    encoding: BINARY_KEEP
+
+  Latitude:
+    encoding: NUMERIC_KEEP
+
+  Longitude:
+    encoding: NUMERIC_KEEP
+
+  distance_fire_to_station:
+    encoding: NUMERIC_KEEP
+
+  distance_to_city_center_km:
+    encoding: NUMERIC_KEEP
+
+  distance_sqrt:
+    encoding: NUMERIC_KEEP
+
+  distance_squared:
+    encoding: NUMERIC_KEEP
+
+  distance_bin:
+    encoding: ONE_HOT
+
+  area_distance_bin:
+    encoding: ONE_HOT
+
+  detour_ratio:
+    encoding: NUMERIC_KEEP
+
+  concurrent_same_borough:
+    encoding: NUMERIC_KEEP
+
+  borough_intersection_count:
+    encoding: NUMERIC_KEEP
+
+  borough_intersection_density:
+    encoding: NUMERIC_KEEP
+
+  incident_intersection_count_500m:
+    encoding: NUMERIC_KEEP
+
+  incident_intersection_density_500m:
+    encoding: NUMERIC_KEEP
+
+  incident_intersection_count_1000m:
+    encoding: NUMERIC_KEEP
+
+  incident_intersection_density_1000m:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_bucket:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_ord:
+    encoding: NUMERIC_KEEP
+
+  NumOfCalls_log:
+    encoding: NUMERIC_KEEP
+
+  risk_property_outdoor:
+    encoding: BINARY_KEEP
+
+  risk_property_road_vehicle:
+    encoding: BINARY_KEEP
+
+  risk_property_outdoor_structure:
+    encoding: BINARY_KEEP
+
+  risk_many_calls:
+    encoding: BINARY_KEEP
+
+  risk_very_many_calls:
+    encoding: BINARY_KEEP
+
+  risk_special_service:
+    encoding: BINARY_KEEP
+
+  risk_fire:
+    encoding: BINARY_KEEP
+
+  risk_noncentral:
+    encoding: BINARY_KEEP
+
+  risk_repeated_call:
+    encoding: BINARY_KEEP
+
+  risk_weekday_4:
+    encoding: BINARY_KEEP
+
+  risk_weekday_2:
+    encoding: BINARY_KEEP
+
+  risk_month_3_5_6:
+    encoding: BINARY_KEEP
+
+  risk_not_nightshift:
+    encoding: BINARY_KEEP
+
+  risk_not_weekend:
+    encoding: BINARY_KEEP
+
+  high_residual_risk_score:
+    encoding: NUMERIC_KEEP
+
+  many_calls_x_outdoor:
+    encoding: BINARY_KEEP
+
+  many_calls_x_road_vehicle:
+    encoding: BINARY_KEEP
+
+  many_calls_x_special:
+    encoding: BINARY_KEEP
+
+  many_calls_x_noncentral:
+    encoding: BINARY_KEEP
+
+  road_vehicle_x_noncentral:
+    encoding: BINARY_KEEP
+
+  outdoor_x_noncentral:
+    encoding: BINARY_KEEP
+
+  repeated_x_many_calls:
+    encoding: BINARY_KEEP
+
+  fire_x_many_calls:
+    encoding: BINARY_KEEP
+
+  station_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+
+  borough_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+
+  borough_rolling_max_last_3:
+    encoding: NUMERIC_KEEP
+
+  station_inertia_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+
+  borough_inertia_rolling_mean_last_3:
+    encoding: NUMERIC_KEEP
+
+  borough_inertia_rolling_max_last_3:
+    encoding: NUMERIC_KEEP
+
+  expected_time_by_station_inertia:
+    encoding: NUMERIC_KEEP
+
+  expected_time_by_borough_inertia:
+    encoding: NUMERIC_KEEP
+
+  #station_prev_24h_incident_count_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_attendance_seconds_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_distance_fire_to_station_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_repeated_call_rate_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_rate_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_false_alarm_count_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_fire_count_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_count_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_rush_hour_rate_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_nightshift_rate_sum:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_incident_count_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_attendance_seconds_mean:
+  # encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_distance_fire_to_station_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_repeated_call_rate_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_rate_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_false_alarm_count_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_fire_count_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_count_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_rush_hour_rate_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_nightshift_rate_mean:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_incident_count_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_attendance_seconds_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_distance_fire_to_station_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_repeated_call_rate_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_rate_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_false_alarm_count_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_fire_count_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_count_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_rush_hour_rate_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_nightshift_rate_max:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_incident_count_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_attendance_seconds_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_distance_fire_to_station_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_repeated_call_rate_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_rate_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_false_alarm_count_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_fire_count_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_count_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_rush_hour_rate_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_nightshift_rate_std:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_incident_count_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_attendance_seconds_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_mean_distance_fire_to_station_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_repeated_call_rate_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_rate_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_false_alarm_count_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_fire_count_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_special_service_count_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_rush_hour_rate_last:
+  #  encoding: NUMERIC_KEEP
+
+  #station_prev_24h_nightshift_rate_last:
+  #  encoding: NUMERIC_KEEP
+    
+feature_scaling:
+  scaler: STANDARD
+  scale_columns:
+    - CalYear
+    - Month_sin
+    - Month_cos
+    - Weekday_sin
+    - Weekday_cos
+    - Hour_sin
+    - Hour_cos
+    - DeployedFromStation_Name_loo
+    - PropertyType_loo
+    - IncGeo_BoroughName_loo
+    - Latitude
+    - Longitude
+    - distance_fire_to_station
+    - distance_to_city_center_km
+    - distance_sqrt
+    - distance_squared
+    - detour_ratio
+    - concurrent_same_borough
+    - borough_intersection_count
+    - borough_intersection_density
+    - incident_intersection_count_500m
+    - incident_intersection_density_500m
+    - incident_intersection_count_1000m
+    - incident_intersection_density_1000m
+    - NumOfCalls_bucket
+    - NumOfCalls_ord
+    - NumOfCalls_log
+    - high_residual_risk_score
+    - many_calls_x_outdoor
+    - many_calls_x_road_vehicle
+    - many_calls_x_special
+    - many_calls_x_noncentral
+    - road_vehicle_x_noncentral
+    - outdoor_x_noncentral
+    - repeated_x_many_calls
+    - fire_x_many_calls
+    - station_rolling_mean_last_3
+    - borough_rolling_mean_last_3
+    - borough_rolling_max_last_3
+    - station_inertia_rolling_mean_last_3
+    - borough_inertia_rolling_mean_last_3
+    - borough_inertia_rolling_max_last_3
+    - expected_time_by_station_inertia
+    - expected_time_by_borough_inertia
+   # - station_prev_24h_incident_count_sum
+   #- station_prev_24h_mean_attendance_seconds_sum
+   # - station_prev_24h_mean_distance_fire_to_station_sum
+   # - station_prev_24h_repeated_call_rate_sum
+   # - station_prev_24h_special_service_rate_sum
+   # - station_prev_24h_false_alarm_count_sum
+   # - station_prev_24h_fire_count_sum
+   # - station_prev_24h_special_service_count_sum
+   # - station_prev_24h_rush_hour_rate_sum
+   # - station_prev_24h_nightshift_rate_sum
+   # - station_prev_24h_incident_count_mean
+   # - station_prev_24h_mean_attendance_seconds_mean
+   # - station_prev_24h_mean_distance_fire_to_station_mean
+   # - station_prev_24h_repeated_call_rate_mean
+   # - station_prev_24h_special_service_rate_mean
+   # - station_prev_24h_false_alarm_count_mean
+   # - station_prev_24h_fire_count_mean
+   # - station_prev_24h_special_service_count_mean
+   # - station_prev_24h_rush_hour_rate_mean
+   # - station_prev_24h_nightshift_rate_mean
+   # - station_prev_24h_incident_count_max
+   # - station_prev_24h_mean_attendance_seconds_max
+   # - station_prev_24h_mean_distance_fire_to_station_max
+   # - station_prev_24h_repeated_call_rate_max
+   # - station_prev_24h_special_service_rate_max
+   # - station_prev_24h_false_alarm_count_max
+   # - station_prev_24h_fire_count_max
+   # - station_prev_24h_special_service_count_max
+   # - station_prev_24h_rush_hour_rate_max
+   # - station_prev_24h_nightshift_rate_max
+   # - station_prev_24h_incident_count_std
+   # - station_prev_24h_mean_attendance_seconds_std
+   # - station_prev_24h_mean_distance_fire_to_station_std
+   # - station_prev_24h_repeated_call_rate_std
+   # - station_prev_24h_special_service_rate_std
+   # - station_prev_24h_false_alarm_count_std
+   # - station_prev_24h_fire_count_std
+   # - station_prev_24h_special_service_count_std
+   # - station_prev_24h_rush_hour_rate_std
+   # - station_prev_24h_nightshift_rate_std
+   # - station_prev_24h_incident_count_last
+   # - station_prev_24h_mean_attendance_seconds_last
+   # - station_prev_24h_mean_distance_fire_to_station_last
+   # - station_prev_24h_repeated_call_rate_last
+   # - station_prev_24h_special_service_rate_last
+   # - station_prev_24h_false_alarm_count_last
+   # - station_prev_24h_fire_count_last
+   # - station_prev_24h_special_service_count_last
+   # - station_prev_24h_rush_hour_rate_last
+   # - station_prev_24h_nightshift_rate_last

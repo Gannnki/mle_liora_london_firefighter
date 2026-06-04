@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#e63946"          # Mattes Signalrot für Highlights und Knöpfe
+backgroundColor = "#f0f4f8"       # Edles, sanftes Hellblau/Eisblau für den Hintergrund
+secondaryBackgroundColor = "#ffffff" # Reinweiß für die Sidebar und Eingabefelder
+textColor = "#0f172a"             # Tiefes Anthrazit für den Text
+font = "sans serif"
