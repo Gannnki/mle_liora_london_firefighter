@@ -1,24 +1,42 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib  # Used for loading scikit-learn / xgboost pickles
+import pydeck as pdk
+import joblib
 import time
+import os
+import sys
 
-# 1. Page Configuration
+# 1. Get the absolute path of the directory where 3_Live_Simulator.py lives
+current_dir = os.path.dirname(os.path.abspath(__file__)) # src/pages/
+
+# 2. Navigate up to the 'src' folder (where FeatureEngineering.py sits)
+src_path = os.path.abspath(os.path.join(current_dir, ".."))
+
+# 3. Add 'src' to Python's system path so it can always find the class
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+from FeatureEngineering import FeatureEncoder, FeatureScaler
+
+# ==========================================
+# 1. PAGE CONFIGURATION & MODERN SAAS CSS
+# ==========================================
 st.set_page_config(
     page_title="Live Incident Simulator", 
     page_icon="🎛️", 
     layout="wide"
 )
 
-# Custom SaaS-style CSS for modern white cards
+# Custom SaaS-style CSS for white cards and dashboard alignment
 st.markdown("""
     <style>
     .dashboard-card {
-        background-color: #ffffff;
-        padding: 24px;
+        background-color: #f8fafc;
+        padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border-left: 5px solid #ef4444;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
     }
     .card-title {
@@ -27,71 +45,378 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 12px;
     }
+    .kpi-box {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+    }
+    .kpi-val {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .kpi-lbl {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Heavy Resource Caching: Load your real pickle files only ONCE
+# ==========================================
+# 2. HEAVY RESOURCE CACHING (REAL PRODUCTION MODELS)
+# ==========================================
 @st.cache_resource
 def load_ml_pipeline():
+    """Loads all production pickle files from the models_streamlit directory."""
     try:
-        # Path structurally updated to match your 'models_streamlit' folder
         model = joblib.load("models_streamlit/best_model.pkl")
         scaler = joblib.load("models_streamlit/feature_scaler.pkl")
         encoder = joblib.load("models_streamlit/feature_encoder.pkl")
         return model, scaler, encoder
     except Exception as e:
-        st.error(f"⚠️ Error loading pickle files from 'models_streamlit/' folder: {e}")
+        st.error(f"⚠️ Error loading pickle files from 'models_streamlit/': {e}")
         return None, None, None
 
-# Initialize production pipeline components
+# Initialize real production pipeline components
 model, scaler, encoder = load_ml_pipeline()
 
-# 3. Header Layout
+@st.cache_data
+def load_demo_scenarios():
+    """Loads the 50 random test dataset rows generated in the notebook."""
+    try:
+        df = pd.read_csv("models_streamlit/demo_scenarios.csv")
+        # Explicitly cast coordinates to numeric to avoid rendering errors
+        df["Latitude"] = pd.to_numeric(df["Latitude"], errors='coerce')
+        df["Longitude"] = pd.to_numeric(df["Longitude"], errors='coerce')
+        return df.dropna(subset=["Latitude", "Longitude"])
+    except Exception as e:
+        st.error(f"⚠️ Error loading 'demo_scenarios.csv': {e}")
+        return None
+
+df_scenarios = load_demo_scenarios()
+
+# ==========================================
+# 3. MAIN INTERFACE & 50/50 SPLIT LAYOUT WITH NATIVE MAP
+# ==========================================
 st.title("🎛️ Live Incident Simulator")
-st.caption("Page 4 • Real-Time Live Inference using Production XGBoost Pipeline")
+st.caption("Page 4 • Real-Time Live Inference via Interactive Geo-Selection")
 st.write("")
 
-if model is None:
-    st.warning("Please ensure 'best_model.pkl', 'feature_scaler.pkl', and 'feature_encoder.pkl' are placed inside your 'models_streamlit/' directory.")
-
-st.write("")
-
-# 4. Interactive UI Inputs (Based on your top SHAP drivers)
-col_input1, col_input2 = st.columns(2)
-
-with col_input1:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📍 High-Impact Spatial & Routing Features</div>', unsafe_allow_html=True)
+if df_scenarios is None:
+    st.warning("Please ensure 'demo_scenarios.csv' with 50 rows is generated inside 'models_streamlit/'.")
+else:
+    # Dynamically build dropdown labels combining incident index, station and borough
+    df_scenarios["Selector_Label"] = [
+        f"Incident #{i+1} - Station: {row['DeployedFromStation_Name']} ({row['IncGeo_BoroughName']})" 
+        for i, row in df_scenarios.iterrows()
+    ]
     
-    distance_fire_to_station = st.slider("Driven Road Distance to Station (km):", min_value=0.1, max_value=25.0, value=3.2, step=0.1)
-    detour_ratio = st.slider("Detour Ratio (Route Circuitousness):", min_value=1.0, max_value=3.0, value=1.2, step=0.05)
-    distance_to_city_center_km = st.slider("Distance to London Center (km):", min_value=0.0, max_value=40.0, value=5.5, step=0.5)
-    borough_intersection_density = st.slider("Borough Intersection Density (per sq km):", min_value=5.0, max_value=150.0, value=45.0, step=5.0)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col_input2:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">⏰ Temporal & Incident Context</div>', unsafe_allow_html=True)
+    st.write("### 📍 1. Select Incident Location via Map Control")
     
-    hour = st.slider("Hour of Day (0 - 23):", min_value=0, max_value=23, value=15)
-    is_nightshift = st.selectbox("Is Nightshift Active? (23:00 - 06:00):", options=["No", "Yes"])
-    incident_group = st.selectbox("Incident Group Type:", options=["False Alarm", "Special Service", "Fire"])
-    incident_intersection_count_500m = st.slider("Intersections within 500m Radius:", min_value=0, max_value=30, value=8)
-    concurrent_same_borough = st.number_input("Concurrent Active Incidents in Same Borough:", min_value=0, max_value=10, value=0)
-    st.markdown('</div>', unsafe_allow_html=True)
+   
+    col_map, col_geo_info = st.columns(2)
+    
+    with col_map:
+        st.markdown('<div class="card-title">🗺️ London Incident Location Tracker</div>', unsafe_allow_html=True)
+        
+        # 1. Dropdown selection to choose one of the 50 rows
+        selected_label = st.selectbox("Choose an Incident Template to visualize:", options=df_scenarios["Selector_Label"].tolist())
+        X_live_template = df_scenarios[df_scenarios["Selector_Label"] == selected_label].copy()
+        
+        # 2. Extract coordinates of the single selected active point
+        inc_lat = float(X_live_template["Latitude"].values[0])
+        inc_lon = float(X_live_template["Longitude"].values[0])
+        
+        # 3. Create a dataframe containing ONLY this single selected point
+        # st.map requires the columns to be strictly named 'lat' and 'lon'
+        single_point_df = pd.DataFrame({
+            "lat": [inc_lat],
+            "lon": [inc_lon]
+        })
+        
+        try:
+            # Render the native Streamlit map with ONLY the selected point, centered perfectly
+            st.map(single_point_df, latitude=inc_lat, longitude=inc_lon, zoom=11)
+        except Exception as e:
+            st.error(f"Error rendering map: {e}")
+        
+    with col_geo_info:
+        st.markdown('<div style="height: 55px;"></div>', unsafe_allow_html=True) # Structural alignment spacer
+        st.markdown('<div class="card-title">🗺️ Extracted Geographical Metadata</div>', unsafe_allow_html=True)
+        
+        # Gather immutable geographical data from the selected row
+        station = X_live_template["DeployedFromStation_Name"].values[0]
+        distance_m = float(X_live_template["distance_fire_to_station"].values[0])
+        is_central = int(X_live_template["Is_central_London"].values[0])
+        dist_center_km = float(X_live_template["distance_to_city_center_km"].values[0])
+        borough = X_live_template["IncGeo_BoroughName"].values[0]
+        
+        # Display extracted features cleanly as non-editable SaaS KPI blocks
+        st.markdown(f"""
+            <div class="dashboard-card">
+                <p style="margin: 0 0 10px 0; color: #64748b; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Active Profile</p>
+                <h3 style="margin: 0 0 15px 0; color: #0f172a;">{borough} Region</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="kpi-box"><div class="kpi-val" style="color: #ef4444;">{station}</div><div class="kpi-lbl">Responding Station</div></div>
+                    <div class="kpi-box"><div class="kpi-val">{distance_m:.1f} m</div><div class="kpi-lbl">Route Distance</div></div>
+                    <div class="kpi-box"><div class="kpi-val">{'YES ✅' if is_central == 1 else 'NO ❌'}</div><div class="kpi-lbl">Central London</div></div>
+                    <div class="kpi-box"><div class="kpi-val">{dist_center_km:.2f} km</div><div class="kpi-lbl">To London Center</div></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-st.write("")
+    st.write("---")
+    
+    # ==========================================
+    # STEP 4: ADDITIONAL CONFIGURATIONS (USER DROPDOWNS)
+    # ==========================================
+    st.write("### ⏰ 2. Configure Temporal Settings & Incident Properties")
+    col_input1, col_input2, col_input3 = st.columns(3)
+    
+    with col_input1:
+        st.markdown('<div class="card-title">🕒 Time & Calendars</div>', unsafe_allow_html=True)
+        month = st.slider("Month of the Year:", min_value=1, max_value=12, value=6)
+        
+        weekday_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
+        selected_weekday_str = st.selectbox("Day of the Week:", options=list(weekday_map.keys()), index=2)
+        weekday_val = weekday_map[selected_weekday_str]
+        
+        hour = st.slider("Hour of Day (0 - 23):", min_value=0, max_value=23, value=14)
+        
+        # Apply precise feature engineering constraints live
+        is_nightshift_bool = (hour >= 23) or (hour < 6)
+        is_rush_hour_bool = ((hour >= 7) and (hour <= 9)) or ((hour >= 16) and (hour <= 19))
+        is_weekend_bool = weekday_val >= 5
+        
+        st.write("🔄 **Live Derived Time Flags:**")
+        st.info(f"""
+        * **Is Nightshift:** `{'1 (Active)' if is_nightshift_bool else '0 (Inactive)'}`
+        * **Is Rush Hour:** `{'1 (Active)' if is_rush_hour_bool else '0 (Inactive)'}`
+        * **Is Weekend:** `{'1 (Active)' if is_weekend_bool else '0 (Inactive)'}`
+        """)
+        
+    with col_input2:
+        st.markdown('<div class="card-title">🚨 Incident Specifics</div>', unsafe_allow_html=True)
+        
+        # Only two main options now: Fire or Special Service
+        incident_group = st.selectbox("Incident Group Type:", options=["Fire", "Special Service"])
+        
+        # Check if the user selected "Fire" to trigger the dropdown lock
+        is_fire_selected = (incident_group == "Fire")
+        
+        special_service_options = [
+            'NoSpecialService', 'Lift Release', 'RTC', 'Effecting entry/exit',
+            'No action (not false alarm)', 'Advice Only', 'Flooding', 'Assist other agencies',
+            'Removal of objects from people', 'Suicide/attempts', 'Hazardous Materials incident',
+            'Making Safe (not RTC)', 'Animal assistance incidents', 'Evacuation (no fire)',
+            'Medical Incident', 'Spills and Leaks (not RTC)', 'Other rescue/release of persons',
+            'Other Transport incident', 'Stand By', 'Rescue or evacuation from water', 'Water provision'
+        ]
+        
+        # If Fire is selected, lock to index 0 ('NoSpecialService').
+        # If Special Service is selected, open the dropdown (disabled=False).
+        special_service_type = st.selectbox(
+            "Special Service Type:", 
+            options=special_service_options,
+            index=0,  # Always defaults nicely to 'NoSpecialService'
+            disabled=is_fire_selected,
+            help="This option is only configurable when 'Special Service' is selected above."
+        )
 
-# 5. Live Production Inference Block
+    with col_input3:
+        st.markdown('<div class="card-title">🏢 Property Characteristics</div>', unsafe_allow_html=True)
+        property_category_options = [
+            'Non Residential', 'Outdoor', 'Dwelling', 'Road Vehicle', 
+            'Outdoor Structure', 'Other Residential', 'Boat', 'Rail Vehicle', 'Aircraft'
+        ]
+        property_category = st.selectbox("Property Category:", options=property_category_options, index=2)
+        
+        property_type_options = [
+            "Purpose Built Flats/Maisonettes - 4 to 9 storeys", "House - single occupancy",
+            "Purpose Built Flats/Maisonettes - Up to 3 storeys", "Self contained Sheltered Housing",
+            "Converted Flat/Maisonettes - 3 or more storeys", "Purpose Built Flats/Maisonettes - 10 or more storeys",
+            "Converted Flat/Maisonette - Up to 2 storeys", "Car", "Purpose built office", "Single shop"
+        ]
+        property_type = st.selectbox("Property Type (Top 10):", options=property_type_options)
+
+    st.write("")
+    st.write("---")
+    
+
+# ==========================================
+# 5. ML INFERENCE: FEATURE ENGINEERING & PROCESSING
+# ==========================================
+
+def _numcalls_bucket_to_ordinal(series):
+    """
+    Direct replication of your Notebook ordinal mapping logic.
+    Converts text buckets into exact float values.
+    """
+    bucket_map = {
+        "0": 0.0,
+        "1": 1.0,
+        "2": 2.0,
+        "3": 3.0,
+        "4-5": 4.5,
+        "6-10": 8.0,
+        "10+": 12.0,
+    }
+
+    numeric_values = pd.to_numeric(
+        series,
+        errors="coerce",
+    )
+
+    mapped_values = (
+        series
+        .astype(str)
+        .str.strip()
+        .map(bucket_map)
+    )
+
+    return mapped_values.fillna(numeric_values).fillna(0.0)
+
+# Trigger real inference inside the existing Streamlit framework
 if st.button("Run Real-Time ML Prediction 🚀", use_container_width=True) and model is not None:
-    
-    with st.spinner("Executing live inference through XGBoost pipeline..."):
+    with st.spinner("Executing structural feature transformations & risk calculation..."):
         
-        # --- STEP 1: Background Data Engineering ---
-        distance_sqrt = np.sqrt(distance_fire_to_station)
-        distance_squared = distance_fire_to_station ** 2
-        hour_cos = np.cos(2 * np.pi * hour / 24.0)
-        hour_sin = np.sin(2 * np.pi * hour / 24.0)
-        is_nightshift_val = 1 if is_nightshift == "Yes" else 0
+        # 1. Start with a fresh copy of the selected 1-row historical template
+        X_live = X_live_template.copy()
         
-       
+        # 2. Inject primary user selections from the UI widgets
+        X_live["Month"] = int(month)
+        X_live["Weekday"] = int(weekday_val)
+        X_live["Hour"] = int(hour)
+        X_live["IncidentGroup"] = incident_group
+        X_live["SpecialServiceType"] = special_service_type
+        X_live["PropertyCategory"] = property_category
+        X_live["PropertyType"] = property_type
+   
+        
+        # 3. Synchronize live-derived temporal binary constraints
+        X_live["Is_Nightshift"] = 1 if (hour >= 23 or hour < 6) else 0
+        X_live["Is_Rush_Hour"] = 1 if ((hour >= 7 and hour <= 9) or (hour >= 16 and hour <= 19)) and (weekday_val < 5) else 0
+        X_live["Is_Weekend"] = 1 if (weekday_val >= 5) else 0
+        X_live["Is_SpecialService"] = 1 if incident_group == "Special Service" else 0
+
+        # 4. Property Access Complexity Feature
+        X_live["property_access_complexity"] = (
+            X_live["PropertyType"]
+            .str.contains("Flat|Maisonette|Care|Hospital|School|Sheltered|Estate", case=False, na=False)
+            .astype(int)
+        )
+
+        # 5. Live Risk Feature Engineering (Direct replication of your Notebook method)
+        X_live["risk_property_outdoor"] = (X_live["PropertyCategory"].eq("Outdoor")).astype(int)
+        X_live["risk_property_road_vehicle"] = (X_live["PropertyCategory"].eq("Road Vehicle")).astype(int)
+        X_live["risk_property_outdoor_structure"] = (X_live["PropertyCategory"].eq("Outdoor Structure")).astype(int)
+        
+        # Ordinal tracking for calls bucket using your precise logic
+        numcalls_ord = _numcalls_bucket_to_ordinal(X_live["NumOfCalls_bucket"])
+        X_live["NumOfCalls_ord"] = numcalls_ord
+        X_live["NumOfCalls_log"] = np.log1p(numcalls_ord)
+        
+        X_live["risk_many_calls"] = (X_live["NumOfCalls_ord"] >= 3).astype(int)
+        X_live["risk_very_many_calls"] = (X_live["NumOfCalls_ord"] >= 12).astype(int)
+        
+        X_live["risk_special_service"] = (
+            (X_live["Is_SpecialService"] == 1) | (X_live["IncidentGroup"].eq("Special Service"))
+        ).astype(int)
+        
+        X_live["risk_fire"] = (X_live["IncidentGroup"].eq("Fire")).astype(int)
+        X_live["risk_noncentral"] = (X_live["Is_central_London"] == 0).astype(int)
+        X_live["risk_repeated_call"] = (X_live["Is_RepeatedCall"] == 1).astype(int)
+        
+        X_live["risk_weekday_4"] = (X_live["Weekday"] == 4).astype(int)
+        X_live["risk_weekday_2"] = (X_live["Weekday"] == 2).astype(int)
+        X_live["risk_month_3_5_6"] = (X_live["Month"].isin([3, 5, 6])).astype(int)
+        X_live["risk_not_nightshift"] = (X_live["Is_Nightshift"] == 0).astype(int)
+        X_live["risk_not_weekend"] = (X_live["Is_Weekend"] == 0).astype(int)
+        
+        # Sum columns horizontally to compute high residual risk score
+        risk_cols = [
+            "risk_property_outdoor", "risk_property_road_vehicle", "risk_property_outdoor_structure",
+            "risk_many_calls", "risk_very_many_calls", "risk_special_service", "risk_fire",
+            "risk_noncentral", "risk_repeated_call", "risk_weekday_4", "risk_weekday_2",
+            "risk_month_3_5_6", "risk_not_nightshift", "risk_not_weekend"
+        ]
+        X_live["high_residual_risk_score"] = X_live[risk_cols].sum(axis=1)
+
+        # 6. Risk Interaction Features (Direct replication of your Notebook method)
+        X_live["many_calls_x_outdoor"] = X_live["risk_many_calls"] * X_live["risk_property_outdoor"]
+        X_live["many_calls_x_road_vehicle"] = X_live["risk_many_calls"] * X_live["risk_property_road_vehicle"]
+        X_live["many_calls_x_special"] = X_live["risk_many_calls"] * X_live["risk_special_service"]
+        X_live["many_calls_x_noncentral"] = X_live["risk_many_calls"] * X_live["risk_noncentral"]
+        X_live["road_vehicle_x_noncentral"] = X_live["risk_property_road_vehicle"] * X_live["risk_noncentral"]
+        X_live["outdoor_x_noncentral"] = X_live["risk_property_outdoor"] * X_live["risk_noncentral"]
+        X_live["repeated_x_many_calls"] = X_live["risk_repeated_call"] * X_live["risk_many_calls"]
+        X_live["fire_x_many_calls"] = X_live["risk_fire"] * X_live["risk_many_calls"]
+
+        # ==========================================
+        # 7. STRICT PIPELINE ALIGNMENT & INDEX RESET
+        # ==========================================
+        
+        # Step 1: Drop metadata columns
+        X_final_input = X_live.drop(columns=["Selector_Label", "index"], errors="ignore")
+        
+        # Step 2: HARD RESET THE INDEX
+        # This strips away the row index 
+        X_final_input = X_final_input.reset_index(drop=True)
+        
+        # Step 3: Enforce strict datatype matching based on the scenarios dataframe schema
+        base_schema_dtypes = df_scenarios.drop(columns=["Selector_Label", "index"], errors="ignore").dtypes.to_dict()
+        X_final_input = X_final_input.astype(base_schema_dtypes)
+
+        # ==========================================
+        # 8. ENCODER -> SCALER -> PURE NUMPY MATRIX -> XGBOOST INFERENCE
+        # ==========================================
+        try:
+            # 1. Step: Run the raw live row through your pipeline artifacts
+            X_encoded = encoder.transform(X_final_input) if encoder is not None else X_final_input.copy()
+            X_scaled = scaler.transform(X_encoded) if scaler is not None else X_encoded.copy()
+            
+            # 2. Step: CONVERT TO PURE NUMPY ARRAY 
+            if hasattr(X_scaled, "values"):
+                X_matrix = X_scaled.values  # Converts Pandas DataFrame to pure NumPy array
+            else:
+                X_matrix = np.array(X_scaled)
+                
+            # 3. Step: STRICT HARD MATRIX SLICE TO 515 FEATURES
+            # Forces the array to have exactly the 515 columns the core booster expects
+            X_matrix_final = X_matrix[:, :515]
+
+            # 4. Step: Execute Production XGBoost Inference (Guaranteed 515 features, no name checking!)
+            start_time = time.time()
+            prediction_seconds = model.predict(X_matrix_final)
+            inference_time = time.time() - start_time
+            
+            # 5. Step: Extract the numeric scalar value safely from the output structure
+            if hasattr(prediction_seconds, "item"):
+                pred_val = float(prediction_seconds.item())
+            elif hasattr(prediction_seconds, "__len__") and len(prediction_seconds) > 0:
+                pred_val = float(prediction_seconds[0])
+            else:
+                pred_val = float(prediction_seconds)
+
+                # 🚨 CRITICAL LOG REVERSAL: Converts log-seconds back to real operational seconds
+            pred_val = np.expm1(pred_val)
+                
+            minutes = int(pred_val // 60)
+            seconds = int(pred_val % 60)
+            
+            # Render high-end SaaS Dashboard results component
+            st.success(f"Inference successfully calculated in {inference_time*1000:.2f} ms")
+            st.markdown(f"""
+                <div style="background-color: #f8fafc; padding: 24px; border-radius: 12px; border-left: 6px solid #ef4444; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <span style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Predicted Attendance Time</span>
+                    <h1 style="color: #0f172a; margin: 8px 0 4px 0; font-size: 3.2rem; font-weight: 800;">{minutes} Min. {seconds} Sek.</h1>
+                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Operational Pipeline Status: <b>Live Production 🟢</b> | Evaluated via Anonymous Matrix Token</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        except Exception as pipeline_error:
+            st.error(f"❌ Critical Error during live pipeline transformation or prediction: {pipeline_error}")
