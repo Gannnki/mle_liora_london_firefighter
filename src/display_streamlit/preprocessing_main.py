@@ -46,7 +46,7 @@ if __name__ == "__main__":
     dataset_df = pd.read_csv(DISTANCE_INCLUDED_DATASET_PATH)
 
     # perform test train validation split and sanity check split
-    splitter = DataSplitter(df=dataset_df, config_path=CONFIG_PATH, export_path=SPLIT_EXPORT_PATH, flag_export=True)
+    splitter = DataSplitter(df=dataset_df, config_path=CONFIG_PATH, export_path=SPLIT_EXPORT_PATH, flag_export=False)
     splitter.run()
     splitter.export_encoded_splits(splitter_target=splitter.target_col,
         output_dir=SPLIT_EXPORT_PATH)
