@@ -6,6 +6,7 @@ import joblib
 import time
 import os
 import sys
+import re
 
 # 1. Get the absolute path of the directory where 3_Live_Simulator.py lives
 current_dir = os.path.dirname(os.path.abspath(__file__)) # src/pages/
@@ -88,8 +89,9 @@ model, scaler, encoder = load_ml_pipeline()
 def load_demo_scenarios():
     """Loads the 50 random test dataset rows generated in the notebook."""
     try:
-        df = pd.read_csv("models_streamlit/demo_scenarios.csv")
-        # Explicitly cast coordinates to numeric to avoid rendering errors
+        # 🟢 GENAU WIE IM TRAINING: index_col=0 zieht die erste Spalte sofort ab!
+        df = pd.read_csv("models_streamlit/demo_scenarios.csv", index_col=0)
+        
         df["Latitude"] = pd.to_numeric(df["Latitude"], errors='coerce')
         df["Longitude"] = pd.to_numeric(df["Longitude"], errors='coerce')
         return df.dropna(subset=["Latitude", "Longitude"])
@@ -356,45 +358,46 @@ if st.button("Run Real-Time ML Prediction 🚀", use_container_width=True) and m
         X_live["repeated_x_many_calls"] = X_live["risk_repeated_call"] * X_live["risk_many_calls"]
         X_live["fire_x_many_calls"] = X_live["risk_fire"] * X_live["risk_many_calls"]
 
-        # ==========================================
-        # 7. STRICT PIPELINE ALIGNMENT & INDEX RESET
-        # ==========================================
+        # =========================================================================
+        # 7. PIPELINE PREPARATION (MATCHING MODELING.PY)
+        # =========================================================================
         
-        # Step 1: Drop metadata columns
-        X_final_input = X_live.drop(columns=["Selector_Label", "index"], errors="ignore")
+        # Step 1: Drop only the UI dropdown helper column
+        X_final_input = X_live.drop(columns=["Selector_Label"], errors="ignore")
         
-        # Step 2: HARD RESET THE INDEX
-        # This strips away the row index 
+        # Step 2: Perform index reset exactly like standard processing steps
         X_final_input = X_final_input.reset_index(drop=True)
-        
+            
         # Step 3: Enforce strict datatype matching based on the scenarios dataframe schema
-        base_schema_dtypes = df_scenarios.drop(columns=["Selector_Label", "index"], errors="ignore").dtypes.to_dict()
-        X_final_input = X_final_input.astype(base_schema_dtypes)
+        schema_df = df_scenarios.drop(columns=["Selector_Label"], errors="ignore")
+        base_schema_dtypes = schema_df.dtypes.to_dict()
+        
+        valid_dtypes = {k: v for k, v in base_schema_dtypes.items() if k in X_final_input.columns}
+        X_final_input = X_final_input.astype(valid_dtypes)
 
-        # ==========================================
-        # 8. ENCODER -> SCALER -> PURE NUMPY MATRIX -> XGBOOST INFERENCE
-        # ==========================================
+        # =========================================================================
+        # 8. PIPELINE EXECUTION 
+        # =========================================================================
         try:
-            # 1. Step: Run the raw live row through your pipeline artifacts
+            # Step 1: Run the single live row through your pipeline transformations
             X_encoded = encoder.transform(X_final_input) if encoder is not None else X_final_input.copy()
             X_scaled = scaler.transform(X_encoded) if scaler is not None else X_encoded.copy()
+    
+            # Step 2: EXACT REPLICATION OF MODELING.PY (evaluate_model method)
+            # We convert the DataFrame into a pure NumPy matrix with float32 datatype.
             
-            # 2. Step: CONVERT TO PURE NUMPY ARRAY 
-            if hasattr(X_scaled, "values"):
-                X_matrix = X_scaled.values  # Converts Pandas DataFrame to pure NumPy array
+            if hasattr(X_scaled, "to_numpy"):
+                X_matrix_final = X_scaled.to_numpy(dtype=np.float32, copy=False)
             else:
-                X_matrix = np.array(X_scaled)
-                
-            # 3. Step: STRICT HARD MATRIX SLICE TO 515 FEATURES
-            # Forces the array to have exactly the 515 columns the core booster expects
-            X_matrix_final = X_matrix[:, :515]
+                X_matrix_final = np.array(X_scaled, dtype=np.float32)
 
-            # 4. Step: Execute Production XGBoost Inference (Guaranteed 515 features, no name checking!)
+            # Step 3: Execute Production XGBoost Inference
+            # This line will deliberately fail and trigger the "Feature shape mismatch, expected: 515, got 516" error
             start_time = time.time()
             prediction_seconds = model.predict(X_matrix_final)
             inference_time = time.time() - start_time
-            
-            # 5. Step: Extract the numeric scalar value safely from the output structure
+    
+            # Step 4: Extract the numeric scalar value safely from the output structure
             if hasattr(prediction_seconds, "item"):
                 pred_val = float(prediction_seconds.item())
             elif hasattr(prediction_seconds, "__len__") and len(prediction_seconds) > 0:
@@ -402,21 +405,19 @@ if st.button("Run Real-Time ML Prediction 🚀", use_container_width=True) and m
             else:
                 pred_val = float(prediction_seconds)
 
-                # 🚨 CRITICAL LOG REVERSAL: Converts log-seconds back to real operational seconds
+            # Step 5: Execute log-reversal transform to restore true operational seconds
             pred_val = np.expm1(pred_val)
-                
+        
             minutes = int(pred_val // 60)
             seconds = int(pred_val % 60)
-            
-            # Render high-end SaaS Dashboard results component
+    
             st.success(f"Inference successfully calculated in {inference_time*1000:.2f} ms")
             st.markdown(f"""
                 <div style="background-color: #f8fafc; padding: 24px; border-radius: 12px; border-left: 6px solid #ef4444; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                     <span style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Predicted Attendance Time</span>
                     <h1 style="color: #0f172a; margin: 8px 0 4px 0; font-size: 3.2rem; font-weight: 800;">{minutes} Min. {seconds} Sek.</h1>
-                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Operational Pipeline Status: <b>Live Production 🟢</b> | Evaluated via Anonymous Matrix Token</p>
                 </div>
             """, unsafe_allow_html=True)
-            
+    
         except Exception as pipeline_error:
             st.error(f"❌ Critical Error during live pipeline transformation or prediction: {pipeline_error}")
