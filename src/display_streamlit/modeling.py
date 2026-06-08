@@ -102,12 +102,10 @@ class ModelTrainer:
     def load_data(self):
         self.X_train = pd.read_csv(
             self.path_X_train,
-            index_col=0,
         )
 
         self.X_validation = pd.read_csv(
             self.path_X_validation,
-            index_col=0,
         )
 
         self._sanitize_feature_names()
