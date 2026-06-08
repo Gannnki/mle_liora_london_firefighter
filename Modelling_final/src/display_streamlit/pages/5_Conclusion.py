@@ -139,7 +139,7 @@ with col_fut2:
             <div class="card-title">🔮 Future Research & Pipeline Scaling</div>
             <p style="color: #475569; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
                 To transition this system into a true production-grade platform, three next steps are paramount:<br><br>
-                1. <b>Live Routing Telemetry:</b> Connect the data engineering pipeline with a dynamic mapping API (e.g., Google Maps or OpenStreetMap) to continuously update the <code>detour_ratio</code> with real-time gridlock data.<br>
+                1. <b>Live Routing Telemetry:</b> Connect the data engineering pipeline with a dynamic mapping API (e.g., Google Maps or OpenStreetMap) to continuously update with real-time gridlock data.<br>
                 2. <b>Weather & Environmental Context:</b> Incorporate live meteorological flags (heavy rain, snow, visibility constraints) to map seasonal transit friction.<br>
                 3. <b>Predictive Incident Dispatching:</b> Expand the architecture from predicting response times to forecasting local incident probabilities based on deep historical cycles.
             </p>
