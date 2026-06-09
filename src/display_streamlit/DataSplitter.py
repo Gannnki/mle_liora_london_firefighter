@@ -84,11 +84,7 @@ class DataSplitter:
 
         if self.flag_export:
             export_objects = self.get_split_export_objects()
-            export_to_csv(
-                export_objects,
-                target_col=self.target_col,
-                output_dir=self.export_path,
-            )
+            export_to_csv(export_objects, self.export_path)
 
     def split_by_time(self):
         splits = self.config["date_splits"]
