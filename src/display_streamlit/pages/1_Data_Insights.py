@@ -63,7 +63,7 @@ with col2:
             <div class="card-title">🔍 Data Audit & Visualization Phase</div>
             <p style="color: #475569; margin: 0; line-height: 1.6;">
             Before building our predictive system, we performed an extensive <b>Data Audit</b> to validate data integrity 
-            and uncover hidden relationships. The interactive charts and matrices below present key insights from our 
+            and uncover hidden relationships. The charts and matrices below present key insights from our 
             <b>Data Visualization</b> phase.
             </p>
         </div>

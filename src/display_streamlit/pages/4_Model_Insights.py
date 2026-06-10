@@ -64,13 +64,12 @@ with col_scope:
             </div>
             <div class="highlight-box">
                 <p style="margin: 0; color: #0f172a; font-weight: 500;">
-                    📈 <b>Data Volume:</b> The model was scaled up and fitted on a massive population of <b>over 600,000 corporate rows</b>.
+                    📈 <b>Data Volume:</b> The model was scaled up and fitted on a massive population of <b>over 600,000 rows</b>.
                 </p>
             </div>
             <div class="highlight-box">
                 <p style="margin: 0; color: #0f172a; font-weight: 500;">
-                    🚒 <b>Operational Constraint:</b> Limited strictly to <b>Pump 1 Only</b> (the primary first-responding fire engine). 
-                    Subsequent backup vehicles were pruned to shield the tree splits from trivial structural collinearity.
+                    🚒 <b>Operational Constraint:</b> Limited strictly to <b>Pump 1 Only</b> (the primary first-responding fire engine).
                 </p>
             </div>
         </div>
@@ -148,7 +147,7 @@ with col_shap1:
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
         💡 <b>Key Finding:</b> The beeswarm plot confirms that <i>distance_fire_to_station</i> and its transformation <i>distance_sqrt</i> are the absolute dominant drivers, where high distances (red) push the arrival time up significantly. 
         Crucially, <b>Is_Nightshift</b> shows a clear positive shift (red dots on the right), validating the human-factor latency overhead during late hours. 
-        The 'Sum of 506 other features' demonstrates how highly regularized Config A successfully aggregates hundreds of sparse categorical splits without destabilizing the core prediction.
+        The 'Sum of 506 other features' demonstrates how our highly regularized model successfully aggregates hundreds of sparse categorical splits without destabilizing the core prediction.
         </p>
         """, unsafe_allow_html=True)
         
