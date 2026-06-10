@@ -281,13 +281,11 @@ else:
     with col_input2:
         st.markdown('<div class="card-title">🚨 Incident Specifics</div>', unsafe_allow_html=True)
         
-        # Only two main options now: Fire or Special Service
+        # 1. main choice
         incident_group = st.selectbox("Incident Group Type:", options=["Fire", "Special Service"])
         
-        # Check if the user selected "Fire" to trigger the dropdown lock
-        is_fire_selected = (incident_group == "Fire")
-        
-        special_service_options = [
+        # All options
+        all_special_service_options = [
             'NoSpecialService', 'Lift Release', 'RTC', 'Effecting entry/exit',
             'No action (not false alarm)', 'Advice Only', 'Flooding', 'Assist other agencies',
             'Removal of objects from people', 'Suicide/attempts', 'Hazardous Materials incident',
@@ -296,14 +294,23 @@ else:
             'Other Transport incident', 'Stand By', 'Rescue or evacuation from water', 'Water provision'
         ]
         
-        # If Fire is selected, lock to index 0 ('NoSpecialService').
-        # If Special Service is selected, open the dropdown (disabled=False).
+        # seperate logic
+        if incident_group == "Fire":
+            display_options = ["NoSpecialService"]
+            is_disabled = True
+        else:
+            # for specialservice all possible but 'NoSpecialService' 
+            display_options = [opt for opt in all_special_service_options if opt != "NoSpecialService"]
+            is_disabled = False
+
+        # 2. Dropdown 
         special_service_type = st.selectbox(
             "Special Service Type:", 
-            options=special_service_options,
-            index=0,  # Always defaults nicely to 'NoSpecialService'
-            disabled=is_fire_selected,
-            help="This option is only configurable when 'Special Service' is selected above."
+            options=display_options,
+            index=0,  
+            disabled=is_disabled,
+            help="This option is only configurable when 'Special Service' is selected above.",
+            key=f"special_service_dropdown_{incident_group}"  # dynamic key to change dropdown
         )
 
     with col_input3:

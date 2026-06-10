@@ -31,9 +31,10 @@ st.title("🛠️ Interactive Feature Dictionary")
 st.caption("Page 3 • Comprehensive Audit of Engineered Inputs & Mathematical Transformations")
 st.write("")
 
+
 st.markdown("""
 Our preprocessing pipeline extracts and transforms complex spatial, temporal, and risk metadata. 
-Select any feature category and variable below to explore its data definition and operational rationale:
+Select any feature category and variable below to explore its definition:
 """)
 
 st.write("")
@@ -68,12 +69,12 @@ feature_groups = {
     "📐 Distance Transformations & Routing Proxies": {
         "distance_fire_to_station": "The actual road network distance traveled by the fire engine from the station to the incident scene.",
         "distance_sqrt": "The square root of the driven distance, calculated using the mathematical formula: np.sqrt(distance_fire_to_station).",
-        "distance_squared": "The squared distance, which disproportionately penalizes extremely long routes: distance_fire_to_station ** 2.",
+        "distance_squared": "The squared distance, calculated using the mathematical formula: distance_fire_to_station ** 2.",
         "distance_bin": "A categorical feature binning the distance into 6 fixed classes (0-500m, 500m-1km, 1-2km, 2-3km, 3-5km, 5km+).",
         "area_distance_bin": "This categorical feature clusters dispatches into segmentations based on whether the incident occurs in central or outer London alongside specific distance thresholds (center: 0–500m, 500m–1km, 1–2km; outer: 3–4km, 4–6km, 6km+), allowing the model to capture non-linear traffic and routing speeds unique to each urban zone.",
         "detour_ratio": "Calculates the ratio of driven road distance to straight-line distance, serving as a structural routing proxy that flags urban circuitousness and topological barriers like the River Thames."
     },
-    "🏢 Property & Incident Structural Metadata": {
+    "🏢 Incident & Property data": {
         "IncidentGroup": "The broad category of the incident (e.g., Fire, False Alarm, Special Service).",
         "Is_SpecialService": "Binary flag (1/0) indicating a technical rescue or non-fire emergency dispatch.",
         "SpecialServiceType": "Specific sub-category details for technical rescues (e.g., flooding, heavy extrication).",
@@ -85,7 +86,7 @@ feature_groups = {
         "Is_RepeatedCall": "Binary flag (1/0) indicating if multiple duplicate calls were received for this same running incident.",
         "NumOfCalls_bucket": "Categorical feature classifying the frequency of incoming calls into specific operational buckets.",
         "NumOfCalls_ord": "The transformation of textual categories into true, continuous numbers (decimals).",
-        "NumOfCalls_log": "The logarithmic version of the value above, calculated using the mathematical formula np.log1p(NumOfCalls_ord)—meaning ln(number of calls + 1)."
+        "NumOfCalls_log": "The logarithmic version of NumOfCalls_ord, calculated using the mathematical formula np.log1p(NumOfCalls_ord)—meaning ln(number of calls + 1)."
     },
     "⚡ Risk Features (Binary Flags)": {
         "risk_property_outdoor": "Binary flag (1/0) indicating an open-air incident (often complicates precise geolocation and access).",
@@ -121,7 +122,9 @@ feature_groups = {
         "borough_rolling_max_last_3": "Peak attendance time among the last three responses within the borough.",
         "station_inertia_rolling_mean_last_3": "Tracks the average deviation of the station's last three responses from its historical mean.",
         "borough_inertia_rolling_mean_last_3": "Tracks the average deviation of the borough's last three responses from its historical mean.",
-        "borough_inertia_rolling_max_last_3": "The largest delay (peak deviation) among the borough's last three responses compared to its historical mean."
+        "borough_inertia_rolling_max_last_3": "The largest delay (peak deviation) among the borough's last three responses compared to its historical mean.",
+        "expected_time_by_station_inertia": "Estimated response time for the station, based on how much its recent dispatches were delayed.",
+        "expected_time_by_borough_inertia": "Estimated response time for the borough, based on how much recent local dispatches were delayed."
     }
 }
 
