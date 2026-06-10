@@ -140,12 +140,10 @@ def run_shap_analysis(
     # load datasets
     X_train = pd.read_csv(
         path_X_train,
-        index_col=0,
     )
 
     X_test = pd.read_csv(
         path_X_test,
-        index_col=0,
     )
 
     # sample data for SHAP
