@@ -3,3 +3,7 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 .DS_Store
+data/
+notebooks/dataset_with_filtered_distance_speed.csv
+cuda-keyring_1.1-1_all.deb
+notebooks/catboost_info/
