@@ -44,7 +44,7 @@ def make_safe_feature_names(columns):
 
 def main():
     model = joblib.load(PATH_MODEL)
-    X_val = pd.read_csv(PATH_X_VAL, index_col=0)
+    X_val = pd.read_csv(PATH_X_VAL)
     X_val.columns = make_safe_feature_names(X_val.columns)
     y_val = pd.read_csv(PATH_Y_VAL).squeeze()
 

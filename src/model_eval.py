@@ -107,7 +107,7 @@ def load_model(path):
 
 
 def read_features(path):
-    return pd.read_csv(path, index_col=0).to_numpy(dtype=np.float32, copy=False)
+    return pd.read_csv(path).to_numpy(dtype=np.float32, copy=False)
 
 
 def read_target(path):
