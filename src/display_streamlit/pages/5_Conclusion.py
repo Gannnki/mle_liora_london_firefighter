@@ -62,10 +62,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Spalten-Layout auf 3 saubere, gleich große Spalten ohne Pfeil-Lücken umgestellt
+
 col1, col2, col3 = st.columns(3)
 
-# --- SCHRITT 1 ---
+# --- step 1 ---
 with col1:
     st.markdown("""
         <div class="timeline-card" style="border-top-color: #0284c7;">
@@ -77,7 +77,7 @@ with col1:
         </div>
     """, unsafe_allow_html=True)
 
-# --- SCHRITT 2 ---
+# --- step 2 ---
 with col2:
     st.markdown("""
         <div class="timeline-card" style="border-top-color: #22c55e;">
@@ -91,7 +91,7 @@ with col2:
         </div>
     """, unsafe_allow_html=True)
 
-# --- SCHRITT 3 ---
+# --- step 3 ---
 with col3:
     st.markdown("""
         <div class="timeline-card" style="border-top-color: #6366f1;">
@@ -107,15 +107,15 @@ st.write("")
 # --- SECTION 1: LIMITATIONS ---
 st.subheader("Limitations")
 
-# 2 Spalten erstellen
+# 2 rows
 col_img, col_takeaway = st.columns([1.5, 1])  
 
 with col_img:
-    # Lädt dein JPEG-Bild auf der linken Seite
+    # load picture
     st.image("data_streamlit/limitations.png", use_container_width=True)
 
 with col_takeaway:
-    # Dieses CSS zwingt die Spalte, ihren Inhalt vertikal zu zentrieren
+    
     st.markdown("""
         <style>
             [data-testid="column"]:nth-child(2) {
@@ -127,7 +127,7 @@ with col_takeaway:
         </style>
     """, unsafe_allow_html=True)
     
-    # Deine native Box rutscht dadurch automatisch in die Mitte
+   
     with st.container(border=True):
         st.markdown("#### 🎯 Key Takeaway for Users")
         st.markdown("""
