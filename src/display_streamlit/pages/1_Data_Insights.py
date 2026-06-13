@@ -31,7 +31,7 @@ st.markdown("""
 
 # 2. Header Section
 st.title("🤖 Data Insights")
-st.caption("Page 2 • Technical Analytics, Feature Distributions & Model Correlation")
+st.caption("Page 2 • Data Analytics & Target Distributions")
 
 st.write("")
 
@@ -89,23 +89,6 @@ col3, col4 = st.columns(2)
 
 with col3:
     #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">🏢 Top 8 Busiest London Boroughs</div>', unsafe_allow_html=True)
-    try:
-        st.image("data_streamlit/top_8_boroughs.png", use_container_width=True)
-        
-        # Professional caption for the borough chart
-        st.markdown("""
-        <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
-        💡 <b>Key Finding:</b> The borough of <b>Westminster</b> records by far the highest number of incidents compared to all other districts. 
-        Its high density of commercial properties, tourism hotspots, and complex road networks generates a disproportionately large share of the LFB's daily workload.
-        </p>
-        """, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Could not load top_8_boroughs.png: {e}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col4:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">⏰ Incident Types by Hour of Day</div>', unsafe_allow_html=True)
     try:
         st.image("data_streamlit/incident_types_hourly.png", use_container_width=True)
@@ -122,12 +105,8 @@ with col4:
         st.error(f"Could not load incident_types_hourly.png: {e}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("")
 
-# 5. ROW 3: Time Dynamics (Two Images Side-by-Side)
-col5, col6 = st.columns(2)
-
-with col5:
+with col4:
     #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">🌙 Turnout Time Over Hour (Night Shift Effect)</div>', unsafe_allow_html=True)
     try:
@@ -145,58 +124,40 @@ with col5:
         st.error(f"Could not load turnout_time_hourly.png: {e}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-with col6:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📊 Response Time Histogram</div>', unsafe_allow_html=True)
-    try:
-        st.image("data_streamlit/response_time_hist.png", use_container_width=True)
-        
+    st.write("")
 
-        st.markdown("""
-        <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
-        💡 <b>Key Finding:</b> The target variable exhibits a heavily <b>right-skewed distribution</b>, peaking around <b>300 seconds (5 minutes)</b> with a long tail of extreme outliers. 
-        Training on this raw distribution would destabilize our gradients. This distribution directly justifies our decision to apply a <b>logarithmic transformation</b> during feature engineering to normalize variance.
-        </p>
-        """, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Could not load response_time_hist.png: {e}")
-    st.markdown('</div>', unsafe_allow_html=True)
+# 5. ROW 3: London Map 
+
+st.markdown('<div class="card-title">🗺️ Incident Distribution by Location</div>', unsafe_allow_html=True)
+try:
+    st.image("data_streamlit/london_map.png", use_container_width=True)
+        
+    st.markdown("""
+    <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
+    💡 <b>Key Finding:</b> The 2D histogram shows a spatial pattern of the incidents: There are more incidents in the central part of London and less incidents 
+in the outskirt of London
+    </p>
+    """, unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Could not load london_map.png: {e}")
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.write("")
 
-# 6. ROW 4: Correlations & Relationships (Two Images Side-by-Side)
-col7, col8 = st.columns(2)
+# 5. ROW 3: Histogramms
 
-with col7:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">🔗 Mobilisation Feature Correlation Matrix</div>', unsafe_allow_html=True)
-    try:
-        st.image("data_streamlit/correlation_matrix_mobi.png", use_container_width=True)
+st.markdown('<div class="card-title">📊 Response Time Histogram</div>', unsafe_allow_html=True)
+try:
+    st.image("data_streamlit/target.png", use_container_width=True)
         
-        
-        st.markdown("""
-        <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
-        💡 <b>Key Finding:</b> The near-perfect linear correlation of <b>0.96</b> between <i>AttendanceTimeSeconds</i> and <i>TravelTimeSeconds</i> is purely <b>structural</b>, as response time is natively defined as the sum of turnout and travel duration. 
-        Crucially, the <b>0.35</b> correlation with <i>PumpOrder</i> reveals a real operational insight: subsequent fire engines dispatched to the same location experience a progressive latency overhead.
-        </p>
-        """, unsafe_allow_html=True)   
-    except Exception as e:
-        st.error(f"Could not load correlation_matrix_mobi.png: {e}")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
+    💡 <b>Key Finding:</b> The 2 components (travel time and turn out time) of the attendance time has different distributions. The travel time has larger variations while the turn out time has much smaller variations. Overall, the travel time significantly affect the target variable (the attendance time).
+    </p>
+    """, unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Could not load target.png: {e}")
+st.markdown('</div>', unsafe_allow_html=True)
 
-with col8:
-    #st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">🔗 Incident Feature Correlation Matrix</div>', unsafe_allow_html=True)
-    try:
-        st.image("data_streamlit/correlation_matrix_incidents.png", use_container_width=True)
-        
-        
-        st.markdown("""
-        <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
-        💡 <b>Key Finding:</b> The primary target variable (<i>FirstPumpArriving_AttendanceTime</i>) shows near-zero linear correlation with all structural features. This directly justifies using a non-linear ensemble algorithm like <b>XGBoost</b>, as linear models fail to capture these complex interactions. 
-        Note the strong collinearity (<b>0.88</b>) between <i>NumPumpsAttending</i> and <i>NumStationsWithPumpsAttending</i>, which was handled during feature pruning.
-        </p>
-        """, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Could not load correlation_matrix_incidents.png: {e}")
-    st.markdown('</div>', unsafe_allow_html=True)
+st.write("")
+

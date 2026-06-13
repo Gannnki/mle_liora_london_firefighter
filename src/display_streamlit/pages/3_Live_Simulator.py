@@ -457,12 +457,12 @@ elif df_scenarios is not None and st.button("Run Real-Time ML Prediction 🚀", 
             .astype(int)
         )
 
-        # 5. Live Risk Feature Engineering (Direct replication of your Notebook method)
+        # 5. Live Risk Feature Engineering (Direct replication of Notebook method)
         X_live["risk_property_outdoor"] = (X_live["PropertyCategory"].eq("Outdoor")).astype(int)
         X_live["risk_property_road_vehicle"] = (X_live["PropertyCategory"].eq("Road Vehicle")).astype(int)
         X_live["risk_property_outdoor_structure"] = (X_live["PropertyCategory"].eq("Outdoor Structure")).astype(int)
         
-        # Ordinal tracking for calls bucket using your precise logic
+        # Ordinal tracking for calls bucket 
         numcalls_ord = _numcalls_bucket_to_ordinal(X_live["NumOfCalls_bucket"])
         X_live["NumOfCalls_ord"] = numcalls_ord
         X_live["NumOfCalls_log"] = np.log1p(numcalls_ord)
@@ -493,7 +493,7 @@ elif df_scenarios is not None and st.button("Run Real-Time ML Prediction 🚀", 
         ]
         X_live["high_residual_risk_score"] = X_live[risk_cols].sum(axis=1)
 
-        # 6. Risk Interaction Features (Direct replication of your Notebook method)
+        # 6. Risk Interaction Features (Direct replication of Notebook method)
         X_live["many_calls_x_outdoor"] = X_live["risk_many_calls"] * X_live["risk_property_outdoor"]
         X_live["many_calls_x_road_vehicle"] = X_live["risk_many_calls"] * X_live["risk_property_road_vehicle"]
         X_live["many_calls_x_special"] = X_live["risk_many_calls"] * X_live["risk_special_service"]

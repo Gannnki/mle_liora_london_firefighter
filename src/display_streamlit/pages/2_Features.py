@@ -39,7 +39,7 @@ Select any feature category and variable below to explore its definition:
 
 st.write("")
 
-# 3. Complete Excel Feature Set categorized into groups (Part 1)
+# 3. Complete Excel Feature Set categorized into groups
 feature_groups = {
     "🕒 Temporal Features (Time & Cycles)": {
         "CalYear": "The calendar year of the incident.",

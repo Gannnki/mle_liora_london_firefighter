@@ -31,102 +31,145 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 2. Header Section
-st.title("🏆 Project Synthesis & Operational Evaluation")
-st.caption("Page 6 • Critical Limitations & Final Project Conclusion")
+st.title("🏆 Conclusion & Future Roadmap")
+st.caption("Page 6 • Limitations & Final Project Conclusion")
 st.write("")
 
-# --- SECTION 1: LIMITATIONS ---
-st.subheader("7. Limitations")
 
-# Unified clean container for the overview
-with st.container(border=True):
-    st.markdown("### Operational Boundaries & Challenges")
-    st.markdown("""
-    While our finalized XGBoost model demonstrates good predictive accuracy and strong statistical stability, 
-    an honest assessment of its deployment readiness reveals several critical limitations. These constraints 
-    are primarily driven by data boundaries and the inherent randomness of urban emergency environments.
-    """)
+# --- SECTION 1: CORE ACHIEVEMENTS ---
+st.subheader("Core Achievements")
 
-st.write("")
 
-# Displaying each limitation in an native sidebar-info box layout
-col_lim1, col_lim2, col_lim3 = st.columns(3)
+st.markdown("""
+    <style>
+    .timeline-card {
+        background-color: #ffffff;
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        border-top: 5px solid #1f77b4;
+        margin-bottom: 20px;
+    }
+    .timeline-header {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #0f172a;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-with col_lim1:
-    with st.container(border=True):
-        st.markdown("#### 🚗 Real-Time Traffic Gap")
-        st.markdown("""
-        The model relies entirely on historical, static tabular data (time, coordinates, distances). 
-        It lacks integration with live traffic feeds (Google Maps API) or real-world dispatch anomalies (protests, construction). 
-        This absence explains the *Outlier Gap* in our residual analysis, underestimating extreme arrival delays.
-        """)
 
-with col_lim2:
-    with st.container(border=True):
-        st.markdown("#### 🧠 Micro-Level Human Behavior")
-        st.markdown("""
-        Emergency response times are highly dependent on variables that cannot be quantified in a tabular dataset. 
-        Turnout routines within the station, individual crew driving profiles, or civilian driver behavior 
-        introduce random noise that no offline model can fully capture.
-        """)
+col1, col2, col3 = st.columns(3)
 
-with col_lim3:
-    with st.container(border=True):
-        st.markdown("#### 📈 Overestimation of Rapid Arrivals")
-        st.markdown("""
-        As shown in the advanced diagnostics, the model struggles with very fast dispatches (under 200 seconds), 
-        shifting them back toward the operational mean. This regression-to-the-mean effect lowers sensitivity 
-        to localized, optimal conditions right next to a station.
-        """)
-
-# --- SECTION 2: CONCLUSION ---
-st.subheader("8. Conclusion")
-
-col1, col2 = st.columns([1.5, 1])
-
+# --- step 1 ---
 with col1:
     st.markdown("""
-        <div class="dashboard-card" style="height: 100%;">
-            <div class="card-title">🚒 Executive Summary</div>
-            <p style="color: #334155; line-height: 1.65; margin-bottom: 12px;">
-                This project successfully developed and evaluated a highly robust machine learning pipeline to predict emergency attendance times for the London Fire Brigade (LFB). By progressing systematically from basic baselines to tuned, state-of-the-art gradient boosting frameworks, we established an architecture that balances statistical rigor with practical operational utility.
-            </p>
-            <p style="color: #334155; line-height: 1.65; margin-bottom: 12px;">
-                Our final XGBoost model emerged as the definitive top performer, achieving a <span class="metric-highlight">Test MAE of 49.95 seconds</span> and explaining <span class="metric-highlight">55.73% of the total variance</span> (R² = 0.5773) in response times. This means that, on average, the model forecasts fire engine arrivals with an error margin of under 50 seconds. Furthermore, the P90 metric of 114.88 seconds proves that 90% of all test predictions deviate by less than two minutes from reality, demonstrating a dependable level of reliability for logistical planning.
-            </p>
-            <p style="color: #334155; line-height: 1.65; margin-bottom: 0;">
-                Through SHAP interpretability analysis, we verified that the model’s internal logic mirrors realistic physics and urban geography, driven primarily by spatial travel distance (controlling over 28% of total predictive weight) and heavily refined by non-linear factors like inner-city traffic penalties, detour routing choices, and cyclical temporal patterns.
+        <div class="timeline-card" style="border-top-color: #0284c7;">
+            <div class="timeline-header">🛠️ 1. Data Engineering</div>
+            <p style="color: #334155; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
+                This project successfully transformed inconsistent, raw LFB records into a clean, feature-rich matrix.
+                A prime example of this is the integrating of real-world road-distance metrics to ensure high routing intelligence.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
+# --- step 2 ---
 with col2:
     st.markdown("""
-        <div class="dashboard-card" style="border-left: 4px solid #e63946; height: 100%;">
-            <div class="card-title" style="color: #e63946;">💡 Strategic Value & Impact</div>
+        <div class="timeline-card" style="border-top-color: #22c55e;">
+            <div class="timeline-header">📈 2. Model Performance</div>
+            <p style="color: #334155; line-height: 1.6; font-size: 0.95rem;">
+                Our final XGBoost model emerged as the definitive top performer, achieving a <b>Test MAE of 49.95 seconds</b> and explaining <b>55.73% of the total variance</b> (R² = 0.5773) in response times.
+            </p>
+            <p style="color: #475569; line-height: 1.6; font-size: 0.9rem; margin-top: 8px; font-style: italic; margin-bottom: 0;">
+                On average, arrivals are forecasted with an error under 50s. The P90 metric proves that 90% of predictions deviate by less than two minutes.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# --- step 3 ---
+with col3:
+    st.markdown("""
+        <div class="timeline-card" style="border-top-color: #6366f1;">
+            <div class="timeline-header">🧠 3. Interpretability</div>
+            <p style="color: #334155; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
+                Through SHAP interpretability analysis, we verified that the model’s internal logic mirrors realistic physics and urban geography. 
+                This is driven primarily by spatial travel distance (controlling over 28% of total predictive weight) and heavily refined by non-linear factors like inner-city traffic and cyclical temporal patterns.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.write("")
+# --- SECTION 1: LIMITATIONS ---
+st.subheader("Limitations")
+
+# 2 rows
+col_img, col_takeaway = st.columns([1.5, 1])  
+
+with col_img:
+    # load picture
+    st.image("data_streamlit/limitations.png", use_container_width=True)
+
+with col_takeaway:
+    
+    st.markdown("""
+        <style>
+            [data-testid="column"]:nth-child(2) {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                height: 100%;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+   
+    with st.container(border=True):
+        st.markdown("#### 🎯 Key Takeaway for Users")
+        st.markdown("""
+        Offline model excel at predicting structural, geographical trends, but require live data integrations to capture localized, chaotic spikes.
+        """)
+
+# --- SECTION 2: CONCLUSION ---
+st.subheader("Strategic Value & Impact")
+
+st.markdown("""
+        <div class="dashboard-card" style="border-left: 4px solid #e63946; height: 100%; padding: 15px;">
+            <div class="card-title" style="color: #e63946; font-weight: bold; margin-bottom: 12px;">💡 How to use it now</div>
             <p style="color: #334155; line-height: 1.6; margin-bottom: 16px;">
-                In conclusion, despite the challenges of unpredictable traffic anomalies, this model provides a highly valuable, data-driven foundation for predictive resource allocation.
+                Even with only the historical data, the system successfully points out reasons for historical traffic delays. 
+                It offers a practical framework that can be used already now.
             </p>
-            <p style="color: #475569; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
-                It offers a practical framework that public safety stakeholders can utilize to optimize emergency infrastructure, mitigate logistical risks, and ultimately accelerate lifesaving emergency dispatches across London.
-            </p>
+            <div style="color: #475569; line-height: 1.6; font-size: 0.95rem;">
+                <strong style="color: #334155;">Immediate Usage:</strong>
+                <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li style="margin-bottom: 6px;"><strong>Diagnostic tool:</strong> Serves as a diagnostic tool to find and explain past traffic bottlenecks and delays.</li>
+                    <li style="margin-bottom: 6px;"><strong>Risk Mapping:</strong> Enables teams to highlight high-risk zones and specific times where fire engines lose the most critical time.</li>
+                    <li style="margin-bottom: 6px;"><strong>Scenario Testing:</strong> Allows the fire brigade to simulate and test offline "what-if" scenarios safely.</li>
+                    <li style="margin-bottom: 0;"><strong>Data-Driven Leadership:</strong> Empowers managers to make objective, data-backed decisions for resource management.</li>
+                </ul>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
 # --- SECTION 3: FUTURE OUTLOOK & OPERATIONAL DEPLOYMENT ---
 st.write("")
-st.subheader("9. Operational Deployment & Future Outlook")
+st.subheader("Operational Deployment & Future Outlook")
 
 col_fut1, col_fut2 = st.columns(2)
 
 with col_fut1:
     st.markdown("""
         <div class="dashboard-card" style="height: 100%;">
-            <div class="card-title">🚀 Real-World Operational Integration</div>
+            <div class="card-title">🚀 Real-World Integration</div>
             <p style="color: #334155; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
                 In a live deployment scenario, this XGBoost engine would serve as a <b>Microservice API</b> integrated 
                 directly into the LFB's Computer-Aided Dispatch (CAD) software. The moment an emergency call is received, 
-                the system would automatically fetch the active engine's route and feed it into the model. 
+                the system automatically reads the caller's location and gives traffic-smart recommendations.
                 Instead of dispatching the closest station based on flat geography, the control room receives a 
                 <b>data-driven recommendation</b> choosing the vehicle that circumvents traffic constraints most efficiently.
             </p>
@@ -138,10 +181,10 @@ with col_fut2:
         <div class="dashboard-card" style="border-left: 4px solid #64748b; height: 100%;">
             <div class="card-title">🔮 Future Research & Pipeline Scaling</div>
             <p style="color: #475569; line-height: 1.6; font-size: 0.95rem; margin-bottom: 0;">
-                To transition this system into a true production-grade platform, three next steps are paramount:<br><br>
-                1. <b>Live Routing Telemetry:</b> Connect the data engineering pipeline with a dynamic mapping API (e.g., Google Maps or OpenStreetMap) to continuously update the <code>detour_ratio</code> with real-time gridlock data.<br>
-                2. <b>Weather & Environmental Context:</b> Incorporate live meteorological flags (heavy rain, snow, visibility constraints) to map seasonal transit friction.<br>
-                3. <b>Predictive Incident Dispatching:</b> Expand the architecture from predicting response times to forecasting local incident probabilities based on deep historical cycles.
+                Roadmap to transition our system:<br><br>
+                1. <b>Live Routing:</b> Connect the pipeline with a dynamic mapping API (e.g., Google Maps or OpenStreetMap) to continuously update the route using live, real-time data.<br>
+                2. <b>Weather & Environmental Context:</b> Inject live weather data (heavy rain, snow, visibility constraints).<br>
+                3. <b>Predictive Incident Dispatching:</b> Shift from predicting response times to forcasting incident probabilities.
             </p>
         </div>
     """, unsafe_allow_html=True)
