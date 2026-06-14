@@ -113,8 +113,21 @@ st.markdown('<div class="card-title">🎯 1. Global Feature Importance Baseline<
 st.write("This global split importance illustrates the absolute mathematical weight each engineered feature contributes across all XGBoost trees:")
 
 try:
-    
-    st.image("data_streamlit/shap_feature_importance_percent.png", use_container_width=True)
+    col_importance_percent, col_importance_gain = st.columns(2)
+
+    with col_importance_percent:
+        st.image(
+            "data_streamlit/shap_feature_importance_percent.png",
+            use_container_width=True,
+            caption="SHAP feature importance share",
+        )
+
+    with col_importance_gain:
+        st.image(
+            "data_streamlit/xgboost_feature_importance_gain.png",
+            use_container_width=True,
+            caption="XGBoost feature importance by gain",
+        )
     
     st.markdown("""
     <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
@@ -125,7 +138,7 @@ try:
     """, unsafe_allow_html=True)
     
 except Exception as e:
-    st.info("💡 Place your 'shap_feature_importance_percent.png' inside the 'data_streamlit/' directory to display this chart.")
+    st.info("💡 Place both feature importance images inside the 'data_streamlit/' directory to display these charts.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -140,8 +153,21 @@ with col_shap1:
     st.write("SHAP Impact: Red indicates high feature values, blue indicates low values. Visualizes how variables accelerate or delay predictions:")
     
     try:
-     
-        st.image("data_streamlit/shap_beeswarm.png", use_container_width=True)
+        col_beeswarm, col_bar = st.columns(2)
+
+        with col_beeswarm:
+            st.image(
+                "data_streamlit/shap_beeswarm.png",
+                use_container_width=True,
+                caption="SHAP beeswarm impact distribution",
+            )
+
+        with col_bar:
+            st.image(
+                "data_streamlit/shap_bar.png",
+                use_container_width=True,
+                caption="SHAP mean absolute impact ranking",
+            )
         
         st.markdown("""
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 12px;">
@@ -152,7 +178,7 @@ with col_shap1:
         """, unsafe_allow_html=True)
         
     except Exception as e:
-        st.info("💡 Place your 'shap_beeswarm.png' inside the 'data_streamlit/' directory to display this chart.")
+        st.info("💡 Place both SHAP summary images inside the 'data_streamlit/' directory to display these charts.")
         
     st.markdown('</div>', unsafe_allow_html=True)
 

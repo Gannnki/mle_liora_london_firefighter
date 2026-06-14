@@ -8,6 +8,15 @@ import category_encoders as ce
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from helpers.export_helpers import export_to_csv
 
+SILENT_MISSING_FEATURE_PREFIXES = (
+    "station_prev_24h_",
+)
+
+
+def should_suppress_missing_feature_warning(column_name: str) -> bool:
+    return column_name.startswith(SILENT_MISSING_FEATURE_PREFIXES)
+
+
 class FeatureEncoder:
     def __init__(self, config_path: str):
         with open(config_path, "r") as f:
@@ -26,7 +35,8 @@ class FeatureEncoder:
 
         for col, cfg in self.feature_config.items():
             if col not in X.columns:
-                print(f"Warning: {col} not found in X. Skipping.")
+                if not should_suppress_missing_feature_warning(col):
+                    print(f"Warning: {col} not found in X. Skipping.")
                 continue
 
             print(f"\nEncoding column: {col} | Method: {cfg['encoding']}")
@@ -64,7 +74,8 @@ class FeatureEncoder:
 
         for col, cfg in self.feature_config.items():
             if col not in X.columns:
-                print(f"Warning: {col} not found in X. Skipping.")
+                if not should_suppress_missing_feature_warning(col):
+                    print(f"Warning: {col} not found in X. Skipping.")
                 continue
 
             encoding = cfg["encoding"]
@@ -252,8 +263,17 @@ class FeatureScaler:
             col for col in self.scale_columns if col not in X_train.columns
         ]
 
-        if missing_scale_columns:
-            print("Warning: scale columns not found and skipped:", missing_scale_columns)
+        missing_scale_columns_to_warn = [
+            col
+            for col in missing_scale_columns
+            if not should_suppress_missing_feature_warning(col)
+        ]
+
+        if missing_scale_columns_to_warn:
+            print(
+                "Warning: scale columns not found and skipped:",
+                missing_scale_columns_to_warn,
+            )
 
         self.scale_columns = existing_scale_columns
 
