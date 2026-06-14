@@ -33,3 +33,10 @@ def test_output_metadata_collects_stage_outputs(tmp_path):
     assert metadata[0]["exists"] is True
     assert metadata[0]["type"] == "file"
     assert metadata[0]["size_bytes"] == 2
+
+
+def test_pipeline_packages_inference_artifact_after_training():
+    stage_names = [stage["name"] for stage in pipeline.STAGES]
+
+    assert stage_names.index("train") < stage_names.index("package_inference")
+    assert stage_names.index("package_inference") < stage_names.index("evaluate")

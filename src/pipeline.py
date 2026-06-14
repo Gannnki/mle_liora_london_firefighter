@@ -44,6 +44,13 @@ STAGES = [
         ],
     },
     {
+        "name": "package_inference",
+        "script": BASE_DIR / "src" / "build_inference_pipeline.py",
+        "outputs": [
+            BASE_DIR / "artifacts" / "production" / "inference_pipeline.pkl",
+        ],
+    },
+    {
         "name": "evaluate",
         "script": BASE_DIR / "src" / "model_eval.py",
         "outputs": [
@@ -73,6 +80,7 @@ METRICS_CSV_PATH = BASE_DIR / "output" / "predictions" / "model_eval_metrics.csv
 
 TRACKED_ARTIFACTS = [
     BASE_DIR / "artifacts" / "best_models" / "best_model.pkl",
+    BASE_DIR / "artifacts" / "production" / "inference_pipeline.pkl",
     BASE_DIR / "output" / "predictions",
 ]
 
