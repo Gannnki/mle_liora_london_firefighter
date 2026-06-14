@@ -1,16 +1,21 @@
+"""Feature generation and time-based splitting for the tabular ML pipeline."""
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from sklearn.model_selection import train_test_split
 from helpers.export_helpers import export_to_csv
-import yaml
-
-import numpy as np
-import pandas as pd
 import yaml
 
 
 class DataSplitter:
+    """Create engineered features and train/validation/test splits.
+
+    Despite the name, this class currently owns both feature creation and
+    time-based splitting. Feature transformations are computed before the
+    split, while target-aware encoder/scaler fitting happens later on the
+    training split only.
+    """
+
     def __init__(self, df: pd.DataFrame, config_path: str, export_path: str, flag_export: bool = False):
         self.df = df.copy()
         self.export_path = export_path
@@ -73,6 +78,7 @@ class DataSplitter:
         return project_root / path
 
     def run(self):
+        """Run feature creation, column cleanup, time split, and target log transform."""
         self.add_new_features()
         self.drop_cols_before_split()
         self.split_by_time()

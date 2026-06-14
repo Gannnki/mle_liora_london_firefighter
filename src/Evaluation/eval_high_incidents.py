@@ -1,3 +1,5 @@
+"""Post-training analysis of high-response-time and high-residual incidents."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

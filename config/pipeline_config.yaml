@@ -392,9 +392,6 @@ feature_scaling:
     - Weekday_cos
     - Hour_sin
     - Hour_cos
-    - DeployedFromStation_Name_loo
-    - PropertyType_loo
-    - IncGeo_BoroughName_loo
     - Latitude
     - Longitude
     - distance_fire_to_station

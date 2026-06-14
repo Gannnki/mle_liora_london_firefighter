@@ -1,3 +1,5 @@
+"""Post-training SHAP analysis utilities for model explainability artifacts."""
+
 import joblib
 import __main__
 import numpy as np

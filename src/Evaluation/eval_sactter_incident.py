@@ -1,3 +1,5 @@
+"""Post-training spatial residual diagnostics for incident locations."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

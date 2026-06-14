@@ -1,3 +1,5 @@
+"""Legacy validation-only evaluation script; the main pipeline uses model_eval.py."""
+
 from pathlib import Path
 import re
 

@@ -1,3 +1,5 @@
+"""Experimental temporal feature and LSTM helpers, not part of the main XGBoost pipeline."""
+
 from pathlib import Path
 
 import numpy as np

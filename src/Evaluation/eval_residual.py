@@ -1,4 +1,4 @@
-# residual analysis
+"""Post-training residual analysis script, not part of the main pipeline."""
 
 
 # PATH of important files

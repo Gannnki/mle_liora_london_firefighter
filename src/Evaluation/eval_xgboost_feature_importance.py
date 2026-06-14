@@ -1,3 +1,5 @@
+"""Post-training XGBoost feature-importance artifact generation."""
+
 from pathlib import Path
 import re
 

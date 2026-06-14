@@ -1,3 +1,5 @@
+"""Experimental PyTorch LSTM training entrypoint, not part of the main pipeline."""
+
 from pathlib import Path
 
 import joblib

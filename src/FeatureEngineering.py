@@ -1,3 +1,5 @@
+"""Config-driven feature encoding and scaling for the tabular pipeline."""
+
 from __future__ import annotations
 import pickle
 from pathlib import Path
@@ -8,7 +10,24 @@ import category_encoders as ce
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from helpers.export_helpers import export_to_csv
 
+SILENT_MISSING_FEATURE_PREFIXES = (
+    "station_prev_24h_",
+)
+
+
+def should_suppress_missing_feature_warning(column_name: str) -> bool:
+    """Return true for optional features that should not print missing-column warnings."""
+    return column_name.startswith(SILENT_MISSING_FEATURE_PREFIXES)
+
+
 class FeatureEncoder:
+    """Fit train-only encoders and reuse them for validation/test splits.
+
+    The encoder is driven by ``config/pipeline_config.yaml`` and stores fitted
+    one-hot, top-N, and optional target encoders. Call ``fit_transform`` only on
+    training data; call ``transform`` for validation/test data to avoid leakage.
+    """
+
     def __init__(self, config_path: str):
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
@@ -22,11 +41,13 @@ class FeatureEncoder:
         self.fitted_columns = None
 
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
+        """Fit configured encoders on the training split and return encoded features."""
         encoded_parts = []
 
         for col, cfg in self.feature_config.items():
             if col not in X.columns:
-                print(f"Warning: {col} not found in X. Skipping.")
+                if not should_suppress_missing_feature_warning(col):
+                    print(f"Warning: {col} not found in X. Skipping.")
                 continue
 
             print(f"\nEncoding column: {col} | Method: {cfg['encoding']}")
@@ -60,11 +81,13 @@ class FeatureEncoder:
         return X_encoded
 
     def transform(self, X: pd.DataFrame, split_name: str = None) -> pd.DataFrame:
+        """Transform a non-training split with already fitted encoders."""
         encoded_parts = []
 
         for col, cfg in self.feature_config.items():
             if col not in X.columns:
-                print(f"Warning: {col} not found in X. Skipping.")
+                if not should_suppress_missing_feature_warning(col):
+                    print(f"Warning: {col} not found in X. Skipping.")
                 continue
 
             encoding = cfg["encoding"]
@@ -217,6 +240,13 @@ class FeatureEncoder:
         }
     
 class FeatureScaler:
+    """Scale configured numeric columns using train-only fit statistics.
+
+    Columns omitted from ``feature_scaling.scale_columns`` pass through
+    unchanged. This keeps sparse one-hot features as 0/1 while scaling selected
+    continuous and cyclic columns.
+    """
+
     def __init__(self, config_path: str):
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
@@ -241,6 +271,7 @@ class FeatureScaler:
         self.X_test_scaled = None
 
     def fit_transform(self, X_train: pd.DataFrame) -> pd.DataFrame:
+        """Fit the scaler on training columns and return the scaled train frame."""
         X_scaled = X_train.copy()
         self.fitted_columns = X_train.columns.tolist()
 
@@ -252,8 +283,17 @@ class FeatureScaler:
             col for col in self.scale_columns if col not in X_train.columns
         ]
 
-        if missing_scale_columns:
-            print("Warning: scale columns not found and skipped:", missing_scale_columns)
+        missing_scale_columns_to_warn = [
+            col
+            for col in missing_scale_columns
+            if not should_suppress_missing_feature_warning(col)
+        ]
+
+        if missing_scale_columns_to_warn:
+            print(
+                "Warning: scale columns not found and skipped:",
+                missing_scale_columns_to_warn,
+            )
 
         self.scale_columns = existing_scale_columns
 
@@ -274,6 +314,7 @@ class FeatureScaler:
         return X_scaled
 
     def transform(self, X: pd.DataFrame, split_name: str | None = None) -> pd.DataFrame:
+        """Apply the fitted scaler to validation/test features."""
         X = X.reindex(columns=self.fitted_columns, fill_value=0)
         X_scaled = X.copy()
 

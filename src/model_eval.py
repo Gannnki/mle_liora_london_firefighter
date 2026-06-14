@@ -1,3 +1,5 @@
+"""Evaluate the saved best tabular model on train, validation, and test splits."""
+
 import warnings
 from pathlib import Path
 
@@ -31,6 +33,7 @@ PATH_OUTPUT_TEST_PRED = BASE_DIR / "output/predictions/y_pred_test_eval.csv"
 
 
 def main():
+    """Load the saved model and write final train/validation/test metrics."""
     model = load_model(PATH_MODEL)
 
     X_train = read_features(PATH_X_TRAIN)
@@ -102,19 +105,23 @@ def main():
 
 
 def load_model(path):
+    """Load a saved model artifact and unwrap GridSearchCV-style estimators."""
     model = joblib.load(path)
     return getattr(model, "best_estimator_", model)
 
 
 def read_features(path):
+    """Read feature CSV files as float32 arrays for model prediction."""
     return pd.read_csv(path).to_numpy(dtype=np.float32, copy=False)
 
 
 def read_target(path):
+    """Read a target CSV as a one-dimensional pandas Series."""
     return pd.read_csv(path).squeeze("columns")
 
 
 def validate_feature_count(model, X):
+    """Fail fast when the saved model and current feature matrix do not match."""
     expected_features = getattr(model, "n_features_in_", None)
     if expected_features is None:
         return
@@ -131,11 +138,13 @@ def validate_feature_count(model, X):
 
 
 def predict_original_scale(model, X):
+    """Predict log-scale targets and convert them back to seconds."""
     y_pred_log = model.predict(X)
     return np.expm1(y_pred_log)
 
 
 def prefixed_metrics(prefix, y_true, y_pred):
+    """Return regression metrics with a split-specific column prefix."""
     absolute_error = np.abs(y_true - y_pred)
     return {
         f"{prefix} MAE": round(mean_absolute_error(y_true, y_pred), 2),
