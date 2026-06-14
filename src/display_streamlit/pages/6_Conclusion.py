@@ -83,7 +83,7 @@ with col2:
         <div class="timeline-card" style="border-top-color: #22c55e;">
             <div class="timeline-header">📈 2. Model Performance</div>
             <p style="color: #334155; line-height: 1.6; font-size: 0.95rem;">
-                Our final XGBoost model emerged as the definitive top performer, achieving a <b>Test MAE of 49.95 seconds</b> and explaining <b>55.73% of the total variance</b> (R² = 0.5773) in response times.
+                Our final XGBoost model emerged as the definitive top performer, achieving a <b>Test MAE of 49.62 seconds</b> and explaining <b>58.66% of the total variance</b> (R² = 0.5866) in response times.
             </p>
             <p style="color: #475569; line-height: 1.6; font-size: 0.9rem; margin-top: 8px; font-style: italic; margin-bottom: 0;">
                 On average, arrivals are forecasted with an error under 50s. The P90 metric proves that 90% of predictions deviate by less than two minutes.
