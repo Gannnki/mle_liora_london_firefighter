@@ -44,68 +44,6 @@ Contains details of each dispatched fire engine:
 
 🔗 https://data.london.gov.uk/dataset/london-fire-brigade-mobilisation-records
 
----
-
-## 🔗 Data Integration
-
-The two datasets are linked via:
-
-> **IncidentNumber**
-
-This creates a **one-to-many relationship**:
-
-* One incident → multiple fire engine mobilisations
-
----
-
-## 🎯 Project Goals
-
-### 1. Prediction (Core Task)
-
-Use machine learning to predict:
-
-* **AttendanceTimeSeconds (response time)**
-
-This is formulated as a **regression problem**.
-
----
-
-### 2. Analysis
-
-Identify key factors influencing response time:
-
----
-
-### 3. 
-
----
-
-## ⚙️ Methodology
-
-### Step 1: Data Preprocessing
-
-* Filter consistent time range (2021–2024)
-* Clean missing values
-* Merge datasets using IncidentNumber
-
----
-
-### Step 2: Feature Engineering
-
----
-
-### Step 3: Modeling
----
-
-### Step 4: Evaluation
-
-* MAE (Mean Absolute Error)
-* RMSE (Root Mean Squared Error)
-
----
-
-### Step 5: (Optional) Agent or Workflow automation
----
 
 ## 📁 Project Resources
 
@@ -141,11 +79,6 @@ https://docs.google.com/spreadsheets/d/1JI7_DBcSXJl5UxB8VY-Ybyr3T1NdK0PCDkO1t-ZR
 * The problem is fundamentally a **regression task**
 * Avoid data leakage by excluding arrival timestamps and derived response variables
 * Combine incident context + mobilisation process for prediction
-
----
-
-## 🚀 Future Work
-tbd
 
 ---
 

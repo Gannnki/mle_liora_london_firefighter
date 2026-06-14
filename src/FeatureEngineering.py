@@ -1,3 +1,5 @@
+"""Config-driven feature encoding and scaling for the tabular pipeline."""
+
 from __future__ import annotations
 import pickle
 from pathlib import Path
@@ -14,10 +16,18 @@ SILENT_MISSING_FEATURE_PREFIXES = (
 
 
 def should_suppress_missing_feature_warning(column_name: str) -> bool:
+    """Return true for optional features that should not print missing-column warnings."""
     return column_name.startswith(SILENT_MISSING_FEATURE_PREFIXES)
 
 
 class FeatureEncoder:
+    """Fit train-only encoders and reuse them for validation/test splits.
+
+    The encoder is driven by ``config/pipeline_config.yaml`` and stores fitted
+    one-hot, top-N, and optional target encoders. Call ``fit_transform`` only on
+    training data; call ``transform`` for validation/test data to avoid leakage.
+    """
+
     def __init__(self, config_path: str):
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
@@ -31,6 +41,7 @@ class FeatureEncoder:
         self.fitted_columns = None
 
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
+        """Fit configured encoders on the training split and return encoded features."""
         encoded_parts = []
 
         for col, cfg in self.feature_config.items():
@@ -70,6 +81,7 @@ class FeatureEncoder:
         return X_encoded
 
     def transform(self, X: pd.DataFrame, split_name: str = None) -> pd.DataFrame:
+        """Transform a non-training split with already fitted encoders."""
         encoded_parts = []
 
         for col, cfg in self.feature_config.items():
@@ -228,6 +240,13 @@ class FeatureEncoder:
         }
     
 class FeatureScaler:
+    """Scale configured numeric columns using train-only fit statistics.
+
+    Columns omitted from ``feature_scaling.scale_columns`` pass through
+    unchanged. This keeps sparse one-hot features as 0/1 while scaling selected
+    continuous and cyclic columns.
+    """
+
     def __init__(self, config_path: str):
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
@@ -252,6 +271,7 @@ class FeatureScaler:
         self.X_test_scaled = None
 
     def fit_transform(self, X_train: pd.DataFrame) -> pd.DataFrame:
+        """Fit the scaler on training columns and return the scaled train frame."""
         X_scaled = X_train.copy()
         self.fitted_columns = X_train.columns.tolist()
 
@@ -294,6 +314,7 @@ class FeatureScaler:
         return X_scaled
 
     def transform(self, X: pd.DataFrame, split_name: str | None = None) -> pd.DataFrame:
+        """Apply the fitted scaler to validation/test features."""
         X = X.reindex(columns=self.fitted_columns, fill_value=0)
         X_scaled = X.copy()
 

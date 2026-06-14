@@ -1,3 +1,5 @@
+"""Experimental script for generating temporal features for DL/LSTM experiments."""
+
 import argparse
 from pathlib import Path
 

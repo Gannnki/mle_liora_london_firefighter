@@ -1,3 +1,5 @@
+"""Ad-hoc overfitting check using shuffled targets; not part of the main pipeline."""
+
 import numpy as np
 from sklearn.base import clone
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error

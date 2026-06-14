@@ -1,6 +1,7 @@
+"""Model training utilities for the tabular regression pipeline."""
+
 import yaml
 import joblib
-import inspect
 import numpy as np
 import pandas as pd
 import re
@@ -40,6 +41,7 @@ DEFAULT_EARLY_STOPPING_ROUNDS = 50
 
 
 def get_model_class(model_type):
+    """Return the estimator class for a configured model type."""
     if model_type in MODEL_MAPPING:
         return MODEL_MAPPING[model_type]
 
@@ -70,6 +72,13 @@ def get_model_class(model_type):
 
 
 class ModelTrainer:
+    """Train candidate regressors on log-transformed response time targets.
+
+    The trainer reads preprocessed CSV splits, fits configured models on
+    ``log1p(AttendanceTimeSeconds)``, evaluates predictions after converting
+    them back with ``expm1``, and saves the best validation model artifact.
+    """
+
     def __init__(
         self,
         path_X_train,

@@ -1,3 +1,5 @@
+"""Experimental PyTorch LSTM utilities, not part of the main XGBoost pipeline."""
+
 from dataclasses import dataclass
 
 import numpy as np

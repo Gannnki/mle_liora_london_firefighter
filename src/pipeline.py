@@ -78,6 +78,7 @@ TRACKED_ARTIFACTS = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the XGBoost pipeline runner."""
     parser = argparse.ArgumentParser(
         description="Run the XGBoost pipeline end to end.",
     )
@@ -120,6 +121,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Create run metadata, optionally start MLflow, and execute selected stages."""
     args = parse_args()
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_dir = BASE_DIR / "output" / "runs" / run_id
@@ -170,6 +172,7 @@ def run_pipeline(
     metadata: dict,
     metadata_path: Path,
 ) -> int:
+    """Run each selected stage and persist run metadata after every stage."""
     pipeline_start_time = time.perf_counter()
 
     try:
@@ -206,11 +209,13 @@ def run_pipeline(
 
 
 def setup_mlflow(args: argparse.Namespace) -> None:
+    """Configure the MLflow tracking URI and experiment for this run."""
     mlflow.set_tracking_uri(args.tracking_uri)
     mlflow.set_experiment(args.experiment_name)
 
 
 def log_initial_mlflow_metadata(metadata: dict) -> None:
+    """Log config files, data fingerprints, and run identity before training."""
     mlflow.set_tag("pipeline", "xgboost")
     mlflow.set_tag("run_id", metadata["run_id"])
     mlflow.set_tag("status", "running")
@@ -229,6 +234,7 @@ def log_initial_mlflow_metadata(metadata: dict) -> None:
 
 
 def log_final_mlflow_outputs(metadata: dict, metadata_path: Path) -> None:
+    """Log final metrics, artifacts, stage durations, and run metadata to MLflow."""
     mlflow.set_tag("status", metadata["status"])
 
     for stage in metadata.get("stages", []):
@@ -258,6 +264,7 @@ def log_final_mlflow_outputs(metadata: dict, metadata_path: Path) -> None:
 
 
 def should_skip_stage(stage_name: str, args: argparse.Namespace) -> bool:
+    """Return whether a stage should be skipped for the parsed CLI options."""
     return (
         (stage_name == "preprocess" and args.skip_preprocess)
         or (stage_name == "train" and args.skip_train)
@@ -266,6 +273,7 @@ def should_skip_stage(stage_name: str, args: argparse.Namespace) -> bool:
 
 
 def run_stage(stage: dict) -> dict:
+    """Execute one pipeline stage as a subprocess and return timing metadata."""
     stage_name = stage["name"]
     script_path = stage["script"]
     started = datetime.now(timezone.utc)
@@ -299,6 +307,7 @@ def run_stage(stage: dict) -> dict:
 
 
 def format_duration(seconds: float) -> str:
+    """Format a duration in seconds as a compact human-readable string."""
     minutes, remaining_seconds = divmod(int(round(seconds)), 60)
     hours, minutes = divmod(minutes, 60)
 
@@ -310,6 +319,7 @@ def format_duration(seconds: float) -> str:
 
 
 def git_metadata() -> dict:
+    """Collect commit, branch, and dirty-worktree information when git is available."""
     return {
         "commit": run_git(["rev-parse", "HEAD"]),
         "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
@@ -318,6 +328,7 @@ def git_metadata() -> dict:
 
 
 def run_git(args: list[str]) -> str | None:
+    """Run a git command in the repository and return stripped stdout."""
     try:
         result = subprocess.run(
             ["git", *args],
@@ -333,10 +344,12 @@ def run_git(args: list[str]) -> str | None:
 
 
 def input_metadata(paths: list[Path]) -> list[dict]:
+    """Build metadata records for tracked input files."""
     return [path_metadata(path, include_hash=True) for path in paths]
 
 
 def output_metadata(stages: list[dict]) -> list[dict]:
+    """Build metadata records for all declared outputs from completed stages."""
     outputs = []
     for stage in stages:
         outputs.extend(path_metadata(path) for path in stage["outputs"])
@@ -344,6 +357,7 @@ def output_metadata(stages: list[dict]) -> list[dict]:
 
 
 def path_metadata(path: Path, include_hash: bool = False) -> dict:
+    """Return existence, type, size/count, and optional hash metadata for a path."""
     metadata = {
         "path": str(path),
         "exists": path.exists(),
@@ -365,6 +379,7 @@ def path_metadata(path: Path, include_hash: bool = False) -> dict:
 
 
 def sha256_file(path: Path) -> str:
+    """Calculate a SHA-256 digest for a file without loading it all into memory."""
     digest = hashlib.sha256()
     with path.open("rb") as file:
         for chunk in iter(lambda: file.read(1024 * 1024), b""):
@@ -373,6 +388,7 @@ def sha256_file(path: Path) -> str:
 
 
 def write_metadata(path: Path, metadata: dict) -> None:
+    """Write run metadata as pretty-printed JSON."""
     path.write_text(
         json.dumps(metadata, indent=2, sort_keys=True),
         encoding="utf-8",

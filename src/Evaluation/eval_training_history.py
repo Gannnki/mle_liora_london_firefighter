@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 
 
+"""Plot training-history curves for neural-network experiments."""
+
 def plot_training_history(
     model_history,
     output_path=None,
