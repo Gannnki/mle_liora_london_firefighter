@@ -1,24 +1,15 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import pydeck as pdk
-import joblib
-import time
 import os
-import sys
-import re
+import json
 from pathlib import Path
+import requests
 
 # 1. Get stable absolute paths no matter where Streamlit is launched from
 CURRENT_DIR = Path(__file__).resolve().parent
 APP_DIR = CURRENT_DIR.parent
-REPO_ROOT = APP_DIR.parents[1]
-
-# 2. Add the Streamlit app folder to Python's system path so pickle can find the classes
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
-
-from FeatureEngineering import FeatureEncoder, FeatureScaler
+API_BASE_URL = os.getenv("LFB_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 # ==========================================
 # 1. PAGE CONFIGURATION & MODERN SAAS CSS
@@ -66,81 +57,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# ==========================================
-# 2. HEAVY RESOURCE CACHING (REAL PRODUCTION MODELS)
-# ==========================================
-@st.cache_resource
-def load_ml_pipeline():
-    """Load production artifacts from the app bundle or the project artifacts folder."""
-    artifact_paths = {
-        "model": [
-            APP_DIR / "models_streamlit" / "best_model.pkl",
-            REPO_ROOT / "artifacts" / "best_models" / "best_model.pkl",
-        ],
-        "scaler": [
-            APP_DIR / "models_streamlit" / "feature_scaler.pkl",
-            REPO_ROOT / "artifacts" / "scalers" / "feature_scaler.pkl",
-        ],
-        "encoder": [
-            APP_DIR / "models_streamlit" / "feature_encoder.pkl",
-            REPO_ROOT / "artifacts" / "encoders" / "feature_encoder.pkl",
-        ],
-    }
-
-    loaded = {}
-    missing = []
-
-    for artifact_name, candidates in artifact_paths.items():
-        artifact_path = next((path for path in candidates if path.exists()), None)
-        if artifact_path is None:
-            missing.append(
-                f"{artifact_name}: " + " or ".join(str(path) for path in candidates)
-            )
-            loaded[artifact_name] = None
-            continue
-
-        try:
-            loaded[artifact_name] = joblib.load(artifact_path)
-        except Exception as e:
-            st.error(f"⚠️ Error loading {artifact_name} from {artifact_path}: {e}")
-            loaded[artifact_name] = None
-
-    if missing:
-        st.error(
-            "⚠️ Missing ML artifact(s). Add the trained pickle files to "
-            "`src/display_streamlit/models_streamlit/` or the root `artifacts/` folder.\n\n"
-            + "\n".join(f"- {item}" for item in missing)
-        )
-
-    model_obj = loaded["model"]
-    scaler_obj = loaded["scaler"]
-    if model_obj is not None and scaler_obj is not None:
-        model_feature_count = getattr(model_obj, "n_features_in_", None)
-        if model_feature_count is None and hasattr(model_obj, "get_booster"):
-            try:
-                model_feature_count = model_obj.get_booster().num_features()
-            except Exception:
-                model_feature_count = None
-
-        scaler_feature_count = len(getattr(scaler_obj, "fitted_columns", []) or [])
-        if (
-            model_feature_count is not None
-            and scaler_feature_count
-            and int(model_feature_count) != scaler_feature_count
-        ):
-            st.error(
-                "⚠️ Incompatible ML artifacts: `best_model.pkl` expects "
-                f"{int(model_feature_count)} features, but `feature_scaler.pkl` "
-                f"was fitted with {scaler_feature_count}. Use the encoder/scaler "
-                "saved from the same training run as the model."
-            )
-            loaded["model"] = None
-
-    return loaded["model"], loaded["scaler"], loaded["encoder"]
-
-# Initialize real production pipeline components
-model, scaler, encoder = load_ml_pipeline()
 
 @st.cache_data
 def load_demo_scenarios():
@@ -425,11 +341,46 @@ def _model_expected_feature_count(model):
 
     return None
 
-# Trigger real inference inside the existing Streamlit framework
-if model is None:
-    st.warning("Prediction is disabled until `best_model.pkl` is available.")
-elif df_scenarios is not None and st.button("Run Real-Time ML Prediction 🚀", use_container_width=True):
+# Trigger inference through the FastAPI backend. The backend owns all model
+# artifacts and feature transformations; Streamlit only sends UI inputs.
+if df_scenarios is not None and st.button("Run Real-Time ML Prediction 🚀", use_container_width=True):
     with st.spinner("Executing structural feature transformations & risk calculation..."):
+        payload = {
+            "template": json.loads(X_live_template.drop(columns=["Selector_Label"], errors="ignore").to_json(orient="records"))[0],
+            "month": int(month),
+            "weekday": int(weekday_val),
+            "hour": int(hour),
+            "incident_group": incident_group,
+            "special_service_type": special_service_type,
+            "property_category": property_category,
+            "property_type": property_type,
+        }
+
+        try:
+            response = requests.post(f"{API_BASE_URL}/predict", json=payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            st.success(f"Inference successfully calculated in {result['inference_ms']:.2f} ms")
+            st.markdown(f"""
+                <div style="background-color: #f8fafc; padding: 24px; border-radius: 12px; border-left: 6px solid #ef4444; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <span style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Predicted Attendance Time</span>
+                    <h1 style="color: #0f172a; margin: 8px 0 4px 0; font-size: 3.2rem; font-weight: 800;">{result['minutes']} Min. {result['remaining_seconds']} Sek.</h1>
+                </div>
+            """, unsafe_allow_html=True)
+        except requests.ConnectionError:
+            st.error(f"❌ Cannot reach the prediction API at `{API_BASE_URL}`. Start FastAPI first.")
+        except requests.HTTPError as exc:
+            try:
+                detail = exc.response.json().get("detail", exc.response.text)
+            except ValueError:
+                detail = exc.response.text
+            st.error(f"❌ Prediction API error: {detail}")
+        except (requests.RequestException, KeyError, ValueError) as exc:
+            st.error(f"❌ Prediction request failed: {exc}")
+
+        # Stop this Streamlit run after rendering the API result. The legacy
+        # in-process implementation below is retained temporarily for reference.
+        st.stop()
         
         # 1. Start with a fresh copy of the selected 1-row historical template
         X_live = X_live_template.copy()
