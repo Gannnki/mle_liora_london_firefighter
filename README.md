@@ -277,6 +277,32 @@ Important next steps:
 * Add live weather context
 * Include current station and appliance availability
 * Extend from response-time prediction to predictive dispatch planning
-* Deploy the trained model behind a FastAPI service and let Streamlit call the API instead of loading model files directly
+* Deploy the FastAPI and Streamlit services to a production environment
 
 With these extensions, the system could evolve from a reporting and planning tool into a real-time decision-support layer for emergency response operations.
+
+## Run the prediction app
+
+The Streamlit simulator now calls a FastAPI service, so run both processes from
+the repository root in separate terminals.
+
+```bash
+pip install -r src/display_streamlit/requirements.txt
+uvicorn src.display_streamlit.api:app --reload --port 8000
+```
+
+The API health check is available at `http://127.0.0.1:8000/health`, and its
+interactive OpenAPI documentation at `http://127.0.0.1:8000/docs`.
+
+Then start the UI:
+
+```bash
+streamlit run src/display_streamlit/streamlit_app.py
+```
+
+By default Streamlit connects to `http://127.0.0.1:8000`. For a deployed API,
+set `LFB_API_URL` before starting Streamlit:
+
+```bash
+LFB_API_URL=https://your-api.example.com streamlit run src/display_streamlit/streamlit_app.py
+```
