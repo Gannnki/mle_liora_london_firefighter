@@ -3,6 +3,7 @@
 from calendar import month
 import os
 import holidays
+from scenario_features import add_time_features
 from dateutil.rrule import weekday
 import pandas as pd
 from pyproj import Transformer
@@ -265,27 +266,11 @@ class DataPreprocesser:
         - is_rush_hour: 07:00–09:00 and 16:00–19:00
         - is_weekend: Saturday/Sunday
         """
-        # find position after Hour
-        hour_pos = df.columns.get_loc("Hour")
-        is_nightshift = ((df["Hour"] >= 23) | (df["Hour"] < 6)).astype(int)
-
-        is_rush_hour = (
-            ((df["Hour"] >= 7) & (df["Hour"] <= 9)) |
-            ((df["Hour"] >= 16) & (df["Hour"] <= 19))
-        ).astype(int)
-
-        is_weekend = (df["Weekday"] >= 5).astype(int)
-
+        df = add_time_features(df)
         uk_holidays = holidays.UnitedKingdom(years=df["CalYear"].unique())
-        is_public_holiday = df["DateOfCall"].dt.date.apply(
-        lambda x: 1 if x in uk_holidays else 0
-    )
-
-        # insert new columns
-        df.insert(hour_pos + 1, "Is_Nightshift", is_nightshift)
-        df.insert(hour_pos + 2, "Is_Rush_Hour", is_rush_hour)
-        df.insert(hour_pos + 3, "Is_Weekend", is_weekend)
-        df.insert(hour_pos + 4, "Is_Public_Holiday", is_public_holiday)
+        df["Is_Public_Holiday"] = df["DateOfCall"].dt.date.apply(
+            lambda value: int(value in uk_holidays)
+        )
         return df
     
     def remove_attendance_time_outliers(df: pd.DataFrame) -> pd.DataFrame:

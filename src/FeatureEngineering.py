@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 import pickle
+from copy import copy
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
 import category_encoders as ce
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from helpers.export_helpers import export_to_csv
+try:
+    from .helpers.export_helpers import export_to_csv
+except ImportError:  # Support existing script entry points and legacy pickles.
+    from helpers.export_helpers import export_to_csv
 
 SILENT_MISSING_FEATURE_PREFIXES = (
     "station_prev_24h_",
@@ -42,6 +46,10 @@ class FeatureEncoder:
 
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
         """Fit configured encoders on the training split and return encoded features."""
+        self.input_columns = [
+            col for col, cfg in self.feature_config.items()
+            if col in X.columns and cfg["encoding"] != "IGNORE"
+        ]
         encoded_parts = []
 
         for col, cfg in self.feature_config.items():
@@ -222,7 +230,7 @@ class FeatureEncoder:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(inference_only_copy(self), f)
 
         print(f"Encoder saved to: {output_path}")
 
@@ -340,7 +348,7 @@ class FeatureScaler:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(inference_only_copy(self), f)
 
         print(f"Scaler saved to: {output_path}")
 
@@ -349,3 +357,12 @@ class FeatureScaler:
             self.get_scaled_export_objects(),
             target_col=splitter_target,
             output_dir=output_dir)
+
+
+def inference_only_copy(component):
+    """Keep fitted state without persisting training/validation/test frames."""
+    compact = copy(component)
+    for name in list(vars(compact)):
+        if name.startswith(("X_train_", "X_val_", "X_test_")):
+            delattr(compact, name)
+    return compact

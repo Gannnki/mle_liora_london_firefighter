@@ -5,12 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from importlib.metadata import version
+import os
+import platform
 import sys
+import tempfile
 from typing import Any
 
 import joblib
 import numpy as np
 import pandas as pd
+
+from src.FeatureEngineering import inference_only_copy
+from src.scenario_features import prepare_scenario
 
 
 @dataclass
@@ -26,13 +33,42 @@ class InferencePipeline:
     def transform(self, X_raw: pd.DataFrame) -> pd.DataFrame:
         """Apply the training-time encoder and scaler to raw feature rows."""
         X = self._ensure_dataframe(X_raw)
+        required = getattr(self.encoder, "input_columns", None)
+        if required is None and hasattr(self.encoder, "feature_config"):
+            fitted = set(getattr(self.encoder, "fitted_columns", []) or [])
+            categorical = set(getattr(self.encoder, "one_hot_encoders", {}))
+            categorical.update(getattr(self.encoder, "loo_encoders", {}))
+            required = [name for name, cfg in self.encoder.feature_config.items()
+                        if name in fitted or name in categorical
+                        or (cfg.get("encoding") == "CYCLIC" and f"{name}_sin" in fitted)]
+        missing = sorted(set(required or []) - set(X.columns))
+        if missing:
+            raise ValueError(f"Missing trained input features: {missing}")
         X_encoded = self.encoder.transform(X)
         return self.scaler.transform(X_encoded)
 
     def predict_log(self, X_raw: pd.DataFrame) -> np.ndarray:
         """Return raw model predictions on the log-transformed target scale."""
         X_scaled = self.transform(X_raw)
+        if self.metadata.get("model_input") == "float32_array":
+            X_scaled = X_scaled.to_numpy(dtype=np.float32, copy=False)
         return self.model.predict(X_scaled)
+
+    def predict_scenario(self, template: dict, settings: dict) -> np.ndarray:
+        """Apply shared scenario features, then the fitted inference transforms."""
+        return self.predict(prepare_scenario(template, settings))
+
+    def validate_artifacts(self) -> None:
+        """Reject mismatched feature order/count before serving predictions."""
+        encoded = getattr(self.encoder, "fitted_columns", None)
+        scaled = getattr(self.scaler, "fitted_columns", None)
+        if encoded is not None and scaled is not None and list(encoded) != list(scaled):
+            raise ValueError("Encoder and scaler feature order differs")
+        expected = getattr(self.model, "n_features_in_", None)
+        if expected is not None and scaled is not None and expected != len(scaled):
+            raise ValueError(f"Model expects {expected} features; scaler has {len(scaled)}")
+        if self.target_transform not in {"log1p", "identity"}:
+            raise ValueError(f"Unknown target transform: {self.target_transform}")
 
     def predict(self, X_raw: pd.DataFrame) -> np.ndarray:
         """Return predictions on the original response-time scale."""
@@ -79,9 +115,10 @@ def build_inference_pipeline(
             f"{missing}"
         )
 
+    _register_legacy_modules()
     inference_pipeline = InferencePipeline(
-        encoder=joblib.load(encoder_path),
-        scaler=joblib.load(scaler_path),
+        encoder=inference_only_copy(joblib.load(encoder_path)),
+        scaler=inference_only_copy(joblib.load(scaler_path)),
         model=joblib.load(model_path),
         metadata={
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -89,12 +126,31 @@ def build_inference_pipeline(
             "scaler_path": str(scaler_path),
             "model_path": str(model_path),
             "target_transform": "log1p",
+            "model_input": "float32_array",
+            "python": platform.python_version(),
+            "dependencies": {name: version(name) for name in (
+                "numpy", "pandas", "pyarrow", "scikit-learn", "category-encoders", "xgboost", "joblib"
+            )},
         },
     )
+    inference_pipeline.validate_artifacts()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(inference_pipeline, output_path, compress=3)
+    # Publish only a complete file, so a concurrent API never reads half a pickle.
+    fd, temporary = tempfile.mkstemp(dir=output_path.parent, suffix=".pkl")
+    os.close(fd)
+    try:
+        joblib.dump(inference_pipeline, temporary, compress=3)
+        os.replace(temporary, output_path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
     return inference_pipeline
+
+
+def _register_legacy_modules() -> None:
+    """Resolve old top-level pickle imports to the canonical training classes."""
+    from src import FeatureEngineering
+    sys.modules["FeatureEngineering"] = FeatureEngineering
 
 
 def load_inference_pipeline(
@@ -111,4 +167,7 @@ def load_inference_pipeline(
         if import_path_text not in sys.path:
             sys.path.insert(0, import_path_text)
 
-    return joblib.load(pipeline_path)
+    _register_legacy_modules()
+    pipeline = joblib.load(pipeline_path)
+    pipeline.validate_artifacts()
+    return pipeline

@@ -63,7 +63,8 @@ STAGES = [
 TRACKED_INPUTS = [
     BASE_DIR / "config" / "pipeline_config.yaml",
     BASE_DIR / "config" / "xgboost_only.yaml",
-    BASE_DIR / "requirements.txt",
+    BASE_DIR / "pyproject.toml",
+    BASE_DIR / "uv.lock",
     BASE_DIR / "data" / "dataset_with_filtered_distance_speed.csv",
 ]
 

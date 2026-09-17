@@ -5,6 +5,8 @@ import numpy as np
 from pathlib import Path
 from helpers.export_helpers import export_to_csv
 import yaml
+from scenario_features import (add_property_features, add_risk_features,
+                               add_interaction_features, calls_ordinal, add_time_features)
 
 
 class DataSplitter:
@@ -172,6 +174,7 @@ class DataSplitter:
             output_dir=output_dir)
 
     def add_new_features(self):
+        self.df = add_time_features(self.df)
         self.add_inner_london_feature()
         self.add_rolling_inertia_features()
         self.add_borough_complexity_features()
@@ -795,261 +798,19 @@ class DataSplitter:
         self.df["detour_ratio"] = self.df["detour_ratio"].fillna(1.0)
 
     def add_property_access_complexity_feature(self):
-        if "PropertyType" not in self.df.columns:
-            raise ValueError(
-                "Cannot add property_access_complexity. Missing column: "
-                "PropertyType"
-            )
-
-        print("Adding property access complexity feature...")
-
-        self.df["property_access_complexity"] = (
-            self.df["PropertyType"]
-            .str.contains(
-                "Flat|Maisonette|Care|Hospital|School|Sheltered|Estate",
-                case=False,
-                na=False,
-            )
-            .astype(int)
-        )
+        self.df = add_property_features(self.df)
 
     def add_risk_features(self):
-        base_features = [
-            "PropertyCategory",
-            "NumOfCalls_bucket",
-            "Is_SpecialService",
-            "IncidentGroup",
-            "Is_central_London",
-            "Weekday",
-            "Is_RepeatedCall",
-            "Month",
-            "Is_Nightshift",
-            "Is_Weekend",
-        ]
-
-        missing_features = [
-            col
-            for col in base_features
-            if col not in self.df.columns
-        ]
-
-        if missing_features:
-            raise ValueError(
-                "Cannot add risk features. Missing columns: "
-                f"{missing_features}"
-            )
-
-        print("Adding high residual risk features...")
-
-        self.df["risk_property_outdoor"] = (
-            self.df["PropertyCategory"].eq("Outdoor")
-        ).astype(int)
-
-        self.df["risk_property_road_vehicle"] = (
-            self.df["PropertyCategory"].eq("Road Vehicle")
-        ).astype(int)
-
-        self.df["risk_property_outdoor_structure"] = (
-            self.df["PropertyCategory"].eq("Outdoor Structure")
-        ).astype(int)
-
-        numcalls_ord = self._numcalls_bucket_to_ordinal(
-            self.df["NumOfCalls_bucket"]
-        )
-
-        self.df["NumOfCalls_ord"] = numcalls_ord
-        self.df["NumOfCalls_log"] = np.log1p(numcalls_ord)
-
-        self.df["risk_many_calls"] = (
-            self.df["NumOfCalls_ord"] >= 3
-        ).astype(int)
-
-        self.df["risk_very_many_calls"] = (
-            self.df["NumOfCalls_ord"] >= 12
-        ).astype(int)
-
-        self.df["risk_special_service"] = (
-            (self.df["Is_SpecialService"] == 1)
-            | (self.df["IncidentGroup"].eq("Special Service"))
-        ).astype(int)
-
-        self.df["risk_fire"] = (
-            self.df["IncidentGroup"].eq("Fire")
-        ).astype(int)
-
-        self.df["risk_noncentral"] = (
-            self.df["Is_central_London"] == 0
-        ).astype(int)
-
-        self.df["risk_repeated_call"] = (
-            self.df["Is_RepeatedCall"] == 1
-        ).astype(int)
-
-        self.df["risk_weekday_4"] = (
-            self.df["Weekday"] == 4
-        ).astype(int)
-
-        self.df["risk_weekday_2"] = (
-            self.df["Weekday"] == 2
-        ).astype(int)
-
-        self.df["risk_month_3_5_6"] = (
-            self.df["Month"].isin([3, 5, 6])
-        ).astype(int)
-
-        self.df["risk_not_nightshift"] = (
-            self.df["Is_Nightshift"] == 0
-        ).astype(int)
-
-        self.df["risk_not_weekend"] = (
-            self.df["Is_Weekend"] == 0
-        ).astype(int)
-
-        risk_cols = [
-            "risk_property_outdoor",
-            "risk_property_road_vehicle",
-            "risk_property_outdoor_structure",
-            "risk_many_calls",
-            "risk_very_many_calls",
-            "risk_special_service",
-            "risk_fire",
-            "risk_noncentral",
-            "risk_repeated_call",
-            "risk_weekday_4",
-            "risk_weekday_2",
-            "risk_month_3_5_6",
-            "risk_not_nightshift",
-            "risk_not_weekend",
-        ]
-
-        self.df["high_residual_risk_score"] = self.df[risk_cols].sum(axis=1)
+        self.df = add_risk_features(self.df)
 
     def add_risk_interaction_features(self):
-        interaction_base_features = [
-            "risk_many_calls",
-            "risk_property_outdoor",
-            "risk_property_road_vehicle",
-            "risk_special_service",
-            "risk_noncentral",
-            "risk_repeated_call",
-            "risk_fire",
-        ]
-
-        missing_features = [
-            col
-            for col in interaction_base_features
-            if col not in self.df.columns
-        ]
-
-        if missing_features:
-            raise ValueError(
-                "Cannot add risk interaction features. Missing columns: "
-                f"{missing_features}"
-            )
-
-        print("Adding risk interaction features...")
-
-        self.df["many_calls_x_outdoor"] = (
-            self.df["risk_many_calls"] * self.df["risk_property_outdoor"]
-        )
-
-        self.df["many_calls_x_road_vehicle"] = (
-            self.df["risk_many_calls"] * self.df["risk_property_road_vehicle"]
-        )
-
-        self.df["many_calls_x_special"] = (
-            self.df["risk_many_calls"] * self.df["risk_special_service"]
-        )
-
-        self.df["many_calls_x_noncentral"] = (
-            self.df["risk_many_calls"] * self.df["risk_noncentral"]
-        )
-
-        self.df["road_vehicle_x_noncentral"] = (
-            self.df["risk_property_road_vehicle"] * self.df["risk_noncentral"]
-        )
-
-        self.df["outdoor_x_noncentral"] = (
-            self.df["risk_property_outdoor"] * self.df["risk_noncentral"]
-        )
-
-        self.df["repeated_x_many_calls"] = (
-            self.df["risk_repeated_call"] * self.df["risk_many_calls"]
-        )
-
-        self.df["fire_x_many_calls"] = (
-            self.df["risk_fire"] * self.df["risk_many_calls"]
-        )
+        self.df = add_interaction_features(self.df)
 
     def _numcalls_bucket_to_ordinal(self, series):
-        bucket_map = {
-            "0": 0.0,
-            "1": 1.0,
-            "2": 2.0,
-            "3": 3.0,
-            "4-5": 4.5,
-            "6-10": 8.0,
-            "10+": 12.0,
-        }
-
-        numeric_values = pd.to_numeric(
-            series,
-            errors="coerce",
-        )
-
-        mapped_values = (
-            series
-            .astype(str)
-            .str.strip()
-            .map(bucket_map)
-        )
-
-        return mapped_values.fillna(numeric_values).fillna(0.0)
+        return calls_ordinal(series)
 
     def sort_out_numcalls(self):
-        if "NumOfCalls_bucket" not in self.df.columns:
-            print("NumOfCalls_bucket column not found; skipping mapping.")
-            return
-
-        numcalls_mapping = {
-            "0": 0.0,
-            "1": 1.0,
-            "2": 2.0,
-            "3": 3.0,
-            "4-5": 4.5,
-            "6-10": 8.0,
-            "10+": 12.0,
-            1: 1.0,
-            2: 2.0,
-            3: 3.0,
-        }
-
-        cleaned_bucket = self.df["NumOfCalls_bucket"].astype(str).str.strip()
-        mapped_bucket = cleaned_bucket.map(numcalls_mapping)
-
-        missing_mapping = (
-            self.df["NumOfCalls_bucket"].notna()
-            & mapped_bucket.isna()
-        )
-
-        if missing_mapping.any():
-            unknown_values = sorted(
-                self.df.loc[
-                    missing_mapping,
-                    "NumOfCalls_bucket",
-                ].astype(str).unique()
-            )
-            raise ValueError(
-                "Unknown NumOfCalls_bucket values: "
-                f"{unknown_values}"
-            )
-
-        self.df["NumOfCalls_bucket"] = mapped_bucket
-        print("Mapped NumOfCalls_bucket to numeric order values.")
-
-
-        def add_inner_london_feature(self):
-            pass
+        self.df["NumOfCalls_bucket"] = calls_ordinal(self.df["NumOfCalls_bucket"])
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """

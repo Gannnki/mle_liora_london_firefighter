@@ -1,0 +1,45 @@
+name: lfb
+services:
+  api:
+    image: lfb-api:local
+    build:
+      context: .
+      target: api
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      LFB_MODEL_PATH: /app/artifacts/production/inference_pipeline.pkl
+    volumes:
+      - ./artifacts/production:/app/artifacts/production:ro
+    restart: unless-stopped
+
+  ui:
+    image: lfb-ui:local
+    build:
+      context: .
+      target: ui
+    ports:
+      - "127.0.0.1:8501:8501"
+    environment:
+      LFB_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  trainer:
+    image: lfb-trainer:local
+    build:
+      context: .
+      target: trainer
+    profiles: ["training"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      MPLCONFIGDIR: /tmp/matplotlib
+    volumes:
+      - ./data:/app/data:ro
+      - ./utils:/app/utils
+      - ./artifacts:/app/artifacts
+      - ./output:/app/output
+      - ./mlruns:/app/mlruns
+    command: ["python", "src/pipeline.py"]
